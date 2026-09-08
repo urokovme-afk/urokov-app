@@ -149,7 +149,7 @@ export function ChatHub({
   >({});
   const [replyingTo, setReplyingTo] = useState<DirectMessage | null>(null);
 
-  // 🔴 UNIVERSAL SWIPE-TO-REPLY (Kompyuter va telefon uchun)
+  // 🔴 UNIVERSAL SWIPE-TO-REPLY
   const [swipingId, setSwipingId] = useState<number | null>(null);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
   const pointerStartX = useRef<number | null>(null);
@@ -418,6 +418,7 @@ export function ChatHub({
               );
               if (isBlockedByUs) return;
             }
+
             if (
               newMsg.sender_email === queryEmail ||
               newMsg.receiver_email === queryEmail
@@ -426,7 +427,9 @@ export function ChatHub({
                 if (prev.some((m) => m.id === newMsg.id)) return prev;
                 return [...prev, newMsg];
               });
-              if (newMsg.sender_email !== queryEmail && !isAdmin) {
+
+              // 🔴 TAYYORLANGAN QISM: Xabar sizga kelgan bo'lsa ovoz chiqarish (Adminni endi bloklamaydi)
+              if (newMsg.receiver_email === myEmail) {
                 if (!isOpen || activeChat !== newMsg.sender_email) {
                   setUnreadCount((prev) => prev + 1);
                   playMessageSound(newMsg.sender_email);
@@ -499,10 +502,9 @@ export function ChatHub({
     }
   }, [isOpen, activeChat, messages, myEmail, isAdmin, currentSpyEmail]);
 
-  // 🔴 POINTER EVENTS (Ham sichqoncha, ham teginish bilan surish uchun)
+  // 🔴 POINTER EVENTS
   const handlePointerDown = (e: React.PointerEvent, msg: DirectMessage) => {
-    if (e.button !== 0) return; // Faqat chap tugma yoki touch
-
+    if (e.button !== 0) return;
     pointerStartX.current = e.clientX;
     setSwipingId(msg.id);
     setSwipeOffset(0);
@@ -511,7 +513,6 @@ export function ChatHub({
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     } catch (err) {}
 
-    // Long Press (Context menu) uchun taymer
     isLongPress.current = false;
     if (pressTimer.current) clearTimeout(pressTimer.current);
 
@@ -538,13 +539,9 @@ export function ChatHub({
 
     if (pointerStartX.current !== null && swipingId !== null) {
       const diff = e.clientX - pointerStartX.current;
-
-      // Agar barmoq qimirlasa, long-press menyusini bekor qilamiz
       if (Math.abs(diff) > 10 && pressTimer.current) {
         clearTimeout(pressTimer.current);
       }
-
-      // Faqat chapga surish ruxsat etiladi (Telegram uslubi)
       if (diff < 0) {
         setSwipeOffset(Math.max(diff, -60));
       }
@@ -555,7 +552,6 @@ export function ChatHub({
     if (pressTimer.current) clearTimeout(pressTimer.current);
 
     if (!isLongPress.current && pointerStartX.current !== null) {
-      // Yetarlicha tortilgan bo'lsa, Reply (Javob yozish) ishga tushadi
       if (swipeOffset <= -40) {
         setReplyingTo(msg);
         if (
@@ -740,16 +736,39 @@ export function ChatHub({
         .select();
 
       if (error) throw error;
+
       if (data && data.length > 0) {
         const newMsg = data[0] as DirectMessage;
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
         });
+
         setTimeout(
           () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
           50,
         );
+
+        // 🔴 BILDIRISHNOMA YUBORISH QISMI
+        const myProfile = liveProfiles[myEmail];
+        const myName = myProfile?.username
+          ? `@${myProfile.username}`
+          : myProfile?.full_name || myEmail.split("@")[0];
+
+        await supabase.from("notifications").insert([
+          {
+            user_email: activeChat,
+            actor_name: myName,
+            actor_avatar: myProfile?.avatar_url || "",
+            type: "message",
+            title: "Новое сообщение",
+            message:
+              textToSend.length > 30
+                ? textToSend.substring(0, 30) + "..."
+                : textToSend,
+            is_read: false,
+          },
+        ]);
       }
     } catch (error: unknown) {
       console.log(error);
@@ -1333,7 +1352,7 @@ export function ChatHub({
         </div>
       )}
 
-      {/* 🔴 Floating Chat Ikonkasi: Faqat asosiy sahifada (isHomePage) ko'rinadi */}
+      {/* 🔴 Floating Chat Ikonkasi */}
       {isHomePage && (
         <div
           onClick={() => setIsOpen(true)}

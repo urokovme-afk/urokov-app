@@ -237,8 +237,10 @@ function TelegramVideoCard({
   );
 }
 
+// 🔴 KETMA-KET ISHLAYDIGAN AUDIO PLEYER
 function TelegramAudioPlayer({ src }: { src: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playBtnRef = useRef<HTMLButtonElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -263,6 +265,17 @@ function TelegramAudioPlayer({ src }: { src: string }) {
 
   const togglePlay = () => {
     if (!audioRef.current) return;
+
+    // Boshqa audiolarni to'xtatish
+    if (!isPlaying) {
+      const allAudios = document.querySelectorAll("audio");
+      allAudios.forEach((a) => {
+        if (a !== audioRef.current && !a.paused) {
+          a.pause();
+        }
+      });
+    }
+
     if (!isLoaded) {
       setIsLoading(true);
       audioRef.current.load();
@@ -271,17 +284,30 @@ function TelegramAudioPlayer({ src }: { src: string }) {
         .then(() => {
           setIsLoaded(true);
           setIsLoading(false);
-          setIsPlaying(true);
         })
         .catch(() => setIsLoading(false));
       return;
     }
+
     if (isPlaying) {
       audioRef.current.pause();
-      setIsPlaying(false);
     } else {
       audioRef.current.play();
-      setIsPlaying(true);
+    }
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+    // Keyingi pleyerni topib avtomatik ishga tushirish (Playlist effekti)
+    const buttons = Array.from(
+      document.querySelectorAll('[data-audio-player="true"] .audio-play-btn'),
+    ) as HTMLButtonElement[];
+    const currentIndex = buttons.indexOf(
+      playBtnRef.current as HTMLButtonElement,
+    );
+
+    if (currentIndex !== -1 && currentIndex + 1 < buttons.length) {
+      buttons[currentIndex + 1].click();
     }
   };
 
@@ -310,21 +336,27 @@ function TelegramAudioPlayer({ src }: { src: string }) {
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="p-3 bg-white dark:bg-[#161616] border border-gray-200 dark:border-gray-800 rounded-xl flex items-center gap-3 select-none">
+    <div
+      data-audio-player="true"
+      className="p-3 bg-white dark:bg-[#161616] border border-gray-200 dark:border-gray-800 rounded-xl flex items-center gap-3 select-none w-full"
+    >
       <audio
         ref={audioRef}
         src={src}
         preload="none"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={handleEnded}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
         className="hidden"
       />
       <button
+        ref={playBtnRef}
         type="button"
         onClick={togglePlay}
         disabled={isLoading}
-        className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-sm transition active:scale-95 disabled:opacity-70 cursor-pointer"
+        className="audio-play-btn w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-sm transition active:scale-95 disabled:opacity-70 cursor-pointer"
       >
         {isLoading ? (
           <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -2452,7 +2484,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Hikoyalar qismi umuman o'zgarmasligi maqsadga muvofiq, u to'liq ekranli media pleyer */}
       {viewingUserEmail && currentStory && (
         <div
           className="fixed inset-0 z-[120] bg-black flex items-center justify-center select-none animate-in fade-in duration-200"
@@ -3154,6 +3185,14 @@ export default function Home() {
               const isVideoMessage =
                 post.media_type === "video_message" && mediaList.length === 1;
 
+              // 🔴 AUDIO/DOCUMENT MULTI-FIX
+              const isAllAudio =
+                mediaList.length > 0 &&
+                mediaList.every((url) => isAudioUrl(url));
+              const isAllDocs =
+                mediaList.length > 0 &&
+                mediaList.every((url) => isDocumentUrl(url));
+
               const postDate = new Date(post.created_at);
               const formattedDate = postDate.toLocaleDateString("ru-RU", {
                 day: "numeric",
@@ -3270,6 +3309,18 @@ export default function Home() {
                                 }
                               />
                             )}
+                          </div>
+                        ) : isAllAudio ? (
+                          <div className="flex flex-col gap-2 w-full">
+                            {mediaList.map((url, idx) => (
+                              <TelegramAudioPlayer key={idx} src={url} />
+                            ))}
+                          </div>
+                        ) : isAllDocs ? (
+                          <div className="flex flex-col gap-2 w-full">
+                            {mediaList.map((url, idx) => (
+                              <TelegramDocumentCard key={idx} url={url} />
+                            ))}
                           </div>
                         ) : (
                           <InstagramCarousel
