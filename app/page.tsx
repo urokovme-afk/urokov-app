@@ -211,7 +211,7 @@ function TelegramVideoCard({
           e.stopPropagation();
           onClick();
         }}
-        className="w-full h-auto max-h-[400px] rounded-xl object-contain bg-black shadow-sm cursor-pointer border border-gray-100 dark:border-gray-800"
+        className="w-full h-auto max-h-[400px] rounded-xl object-contain bg-black shadow-sm cursor-pointer border border-gray-200 dark:border-gray-800"
       />
     );
   }
@@ -219,7 +219,7 @@ function TelegramVideoCard({
   return (
     <div
       onClick={handleLoad}
-      className="group relative w-full aspect-video max-h-[300px] rounded-xl overflow-hidden bg-gray-900 cursor-pointer flex items-center justify-center select-none shadow-sm border border-gray-100 dark:border-gray-800"
+      className="group relative w-full aspect-video max-h-[300px] rounded-xl overflow-hidden bg-gray-900 cursor-pointer flex items-center justify-center select-none shadow-sm border border-gray-200 dark:border-gray-800"
     >
       <video
         src={`${src}#t=0.1`}
@@ -310,7 +310,7 @@ function TelegramAudioPlayer({ src }: { src: string }) {
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="p-3 bg-gray-50 dark:bg-[#161616] border border-gray-100 dark:border-gray-800 rounded-xl flex items-center gap-3 select-none">
+    <div className="p-3 bg-white dark:bg-[#161616] border border-gray-200 dark:border-gray-800 rounded-xl flex items-center gap-3 select-none">
       <audio
         ref={audioRef}
         src={src}
@@ -336,11 +336,11 @@ function TelegramAudioPlayer({ src }: { src: string }) {
       </button>
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex justify-between items-center text-xs">
-          <span className="font-bold text-gray-800 dark:text-gray-200 truncate flex items-center gap-1.5">
+          <span className="font-bold text-gray-900 dark:text-gray-200 truncate flex items-center gap-1.5">
             <Volume2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
             <span className="truncate">{displayName}</span>
           </span>
-          <span className="font-mono text-[10px] text-gray-400 shrink-0 ml-2">
+          <span className="font-mono text-[10px] text-gray-500 dark:text-gray-400 shrink-0 ml-2">
             {isLoaded
               ? `${formatTime(currentTime)} / ${formatTime(duration)}`
               : fileSize || "Audio"}
@@ -404,7 +404,7 @@ function TelegramImageCard({
 
   if (isLoaded) {
     return (
-      <div className="w-full max-h-[380px] rounded-xl overflow-hidden bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center border border-gray-100 dark:border-gray-800/80 shadow-sm">
+      <div className="w-full max-h-[380px] rounded-xl overflow-hidden bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center border border-gray-200 dark:border-gray-800/80 shadow-sm">
         <img
           src={src}
           alt="Post media"
@@ -510,7 +510,7 @@ function InstagramCarousel({
 
   return (
     <div
-      className="relative rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-black/5 dark:bg-white/5 select-none group touch-pan-y"
+      className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-white/5 select-none group touch-pan-y"
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
@@ -2080,14 +2080,14 @@ export default function Home() {
               </button>
               <button
                 onClick={() => setEditingCommentId(null)}
-                className="p-1 text-gray-400 hover:bg-gray-200 rounded cursor-pointer"
+                className="p-1 text-gray-500 dark:text-gray-400 hover:bg-gray-200 rounded cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
           {!isEditing && (
-            <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400 font-medium">
+            <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
               <span>
                 {new Date(comment.created_at).toLocaleTimeString([], {
                   hour: "2-digit",
@@ -2101,7 +2101,7 @@ export default function Home() {
                     setNewCommentText("");
                     setTimeout(() => commentInputRef.current?.focus(), 50);
                   }}
-                  className="hover:text-gray-600 dark:hover:text-gray-200 transition font-semibold cursor-pointer"
+                  className="hover:text-gray-700 dark:hover:text-gray-200 transition font-semibold cursor-pointer"
                 >
                   Ответить
                 </button>
@@ -2179,7 +2179,7 @@ export default function Home() {
   const adminAvatar = adminProfile?.avatar_url || "/avatar-placeholder.png";
 
   return (
-    <div className="w-full min-h-screen relative flex flex-col bg-gray-50 dark:bg-[#0a0a0a] text-black dark:text-white select-none">
+    <div className="w-full min-h-screen relative flex flex-col bg-[#f0f2f5] dark:bg-[#0a0a0a] text-black dark:text-white select-none">
       {/* 🔴 LIKELAR MODALI */}
       {showLikesModalForPostId !== null && isAdmin && (
         <div
@@ -2193,7 +2193,7 @@ export default function Home() {
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-2">
                 <Heart className="w-4 h-4 text-red-500 fill-red-500" />
-                <span className="font-bold text-xs">
+                <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
                   Кто поставил лайк (
                   {
                     reactions.filter(
@@ -2206,7 +2206,7 @@ export default function Home() {
               </div>
               <button
                 onClick={() => setShowLikesModalForPostId(null)}
-                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2216,7 +2216,7 @@ export default function Home() {
               {reactions.filter(
                 (r) => String(r.post_id) === String(showLikesModalForPostId),
               ).length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-6">
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-6">
                   Нет реакций
                 </p>
               ) : (
@@ -2250,7 +2250,7 @@ export default function Home() {
                             <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-500 transition">
                               {lName}
                             </p>
-                            <span className="text-[10px] text-gray-400 font-mono block">
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono block">
                               {r.created_at
                                 ? new Date(r.created_at).toLocaleString([], {
                                     month: "short",
@@ -2274,20 +2274,20 @@ export default function Home() {
 
       {showVideoRecorder && isAdmin && (
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
-          <div className="bg-[#111] border border-gray-800 rounded-[2rem] p-6 shadow-2xl flex flex-col items-center w-full max-w-sm space-y-6">
+          <div className="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-[2rem] p-6 shadow-2xl flex flex-col items-center w-full max-w-sm space-y-6">
             <div className="w-full flex justify-between items-center px-1">
-              <span className="text-white font-bold text-sm tracking-wide">
+              <span className="text-gray-900 dark:text-white font-bold text-sm tracking-wide">
                 Запись видеосообщения
               </span>
               <button
                 onClick={closeVideoRecorder}
-                className="p-1.5 text-gray-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition cursor-pointer"
+                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-full transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full overflow-hidden bg-black border-4 border-gray-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex items-center justify-center">
+            <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full overflow-hidden bg-black border-4 border-gray-200 dark:border-gray-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex items-center justify-center">
               <video
                 ref={liveVideoRef}
                 className={`w-full h-full object-cover ${
@@ -2306,7 +2306,7 @@ export default function Home() {
                 onClick={toggleCamera}
                 disabled={isRecording}
                 title="Повернуть камеру"
-                className="p-3.5 bg-gray-800 hover:bg-gray-700 text-white rounded-full transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="p-3.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-full transition active:scale-95 disabled:opacity-50 cursor-pointer"
               >
                 <SwitchCamera className="w-5 h-5" />
               </button>
@@ -2315,7 +2315,7 @@ export default function Home() {
                 <button
                   onClick={startRecording}
                   title="Начать запись"
-                  className="w-[72px] h-[72px] bg-white rounded-full flex items-center justify-center p-1.5 transition active:scale-95 group shadow-lg cursor-pointer"
+                  className="w-[72px] h-[72px] bg-gray-100 dark:bg-white rounded-full flex items-center justify-center p-1.5 transition active:scale-95 group shadow-lg cursor-pointer"
                 >
                   <div className="w-full h-full bg-red-500 rounded-full group-hover:scale-95 transition-transform" />
                 </button>
@@ -2323,7 +2323,7 @@ export default function Home() {
                 <button
                   onClick={stopRecording}
                   title="Остановить и отправить"
-                  className="w-[72px] h-[72px] bg-white rounded-full flex items-center justify-center p-5 transition active:scale-95 group shadow-lg cursor-pointer"
+                  className="w-[72px] h-[72px] bg-gray-100 dark:bg-white rounded-full flex items-center justify-center p-5 transition active:scale-95 group shadow-lg cursor-pointer"
                 >
                   <div className="w-full h-full bg-red-500 rounded-md group-hover:scale-95 transition-transform" />
                 </button>
@@ -2373,14 +2373,16 @@ export default function Home() {
         <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="max-w-sm w-full bg-white dark:bg-[#121212] rounded-3xl p-5 border border-gray-200 dark:border-gray-800 shadow-2xl relative space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-800">
-              <span className="text-sm font-bold">Новая история</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-white">
+                Новая история
+              </span>
               <button
                 onClick={() => {
                   setShowCreateStory(false);
                   setStoryFile(null);
                   setStoryPreview(null);
                 }}
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2408,10 +2410,10 @@ export default function Home() {
                 value={storyCaption}
                 onChange={(e) => setStoryCaption(e.target.value)}
                 placeholder="Подпись к истории..."
-                className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-[#f5f6f8] dark:bg-black border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-              <div className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl text-xs">
-                <span className="font-semibold flex items-center gap-1.5 text-gray-500">
+              <div className="flex items-center justify-between p-2.5 bg-[#f5f6f8] dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl text-xs">
+                <span className="font-semibold flex items-center gap-1.5 text-gray-600 dark:text-gray-500">
                   <Calendar className="w-3.5 h-3.5 text-blue-500" /> Срок
                   показа:
                 </span>
@@ -2450,6 +2452,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* Hikoyalar qismi umuman o'zgarmasligi maqsadga muvofiq, u to'liq ekranli media pleyer */}
       {viewingUserEmail && currentStory && (
         <div
           className="fixed inset-0 z-[120] bg-black flex items-center justify-center select-none animate-in fade-in duration-200"
@@ -2770,8 +2773,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* HEADER - Professional Minimalist */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0f0f0f]/80 border-b border-gray-800/60 px-4 py-3 flex justify-between items-center max-w-2xl mx-auto w-full">
+      {/* HEADER - Professional Minimalist & Soft Light */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/85 dark:bg-[#0f0f0f]/80 border-b border-gray-200 dark:border-gray-800/60 px-4 py-3 flex justify-between items-center max-w-2xl mx-auto w-full">
         <div className="flex items-center gap-3">
           <input
             type="file"
@@ -2801,14 +2804,14 @@ export default function Home() {
                   hasActiveAdminStory
                     ? hasUnseenAdminStory
                       ? "bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 p-[2px] animate-pulse"
-                      : "border-2 border-gray-700"
-                    : "border-2 border-dashed border-gray-700"
+                      : "border-2 border-gray-300 dark:border-gray-700"
+                    : "border-2 border-dashed border-gray-300 dark:border-gray-700"
                 }`}
               >
                 <img
                   src={adminAvatar}
                   alt="Admin"
-                  className="w-full h-full rounded-full object-cover bg-black"
+                  className="w-full h-full rounded-full object-cover bg-gray-100 dark:bg-black"
                 />
               </div>
 
@@ -2823,7 +2826,7 @@ export default function Home() {
                     }
                     storyFileInputRef.current?.click();
                   }}
-                  className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center border-[2px] border-black shadow-md hover:bg-blue-500 cursor-pointer z-10"
+                  className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center border-[2px] border-white dark:border-black shadow-md hover:bg-blue-500 cursor-pointer z-10"
                 >
                   <Plus className="w-2.5 h-2.5 font-bold" />
                 </button>
@@ -2845,7 +2848,7 @@ export default function Home() {
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 hover:bg-[#222] rounded-xl transition text-gray-400 hover:text-white cursor-pointer"
+                className="relative p-2 hover:bg-gray-100 dark:hover:bg-[#222] rounded-xl transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer"
               >
                 <Bell className="w-5 h-5" />
                 {unreadNotifCount > 0 && (
@@ -2856,11 +2859,11 @@ export default function Home() {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#181818] border border-gray-800 rounded-2xl shadow-2xl p-4 z-50">
-                  <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-2">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#181818] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-4 z-50">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800 mb-2">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-blue-500" />
-                      <span className="font-bold text-xs text-white">
+                      <span className="font-bold text-xs text-gray-900 dark:text-white">
                         Уведомления
                       </span>
                     </div>
@@ -2875,7 +2878,7 @@ export default function Home() {
                             .update({ is_read: true })
                             .eq("user_email", session.user.email);
                         }}
-                        className="text-[11px] text-gray-400 hover:text-blue-400 cursor-pointer"
+                        className="text-[11px] text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer"
                       >
                         <CheckCheck className="w-3.5 h-3.5" />
                       </button>
@@ -2894,12 +2897,12 @@ export default function Home() {
                           onClick={() => handleNotificationClick(n)}
                           className={`p-3 rounded-xl cursor-pointer transition ${
                             n.is_read
-                              ? "bg-[#222]/50 opacity-70"
-                              : "bg-blue-950/20 border border-blue-500/20"
+                              ? "bg-gray-50 dark:bg-[#222]/50 opacity-70"
+                              : "bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-500/20"
                           } hover:opacity-100 flex flex-col gap-1`}
                         >
                           <div className="flex justify-between items-start">
-                            <p className="text-xs font-bold text-white">
+                            <p className="text-xs font-bold text-gray-900 dark:text-white">
                               {n.actor_name}
                             </p>
                             <span className="text-[10px] text-gray-500 font-mono">
@@ -2911,7 +2914,7 @@ export default function Home() {
                               })}
                             </span>
                           </div>
-                          <p className="text-[11px] text-gray-400">
+                          <p className="text-[11px] text-gray-600 dark:text-gray-400">
                             {n.message}
                           </p>
                         </div>
@@ -2926,7 +2929,7 @@ export default function Home() {
           {isAdmin && (
             <Link
               href="/admin"
-              className="p-2 hover:bg-[#222] rounded-xl transition text-blue-400 cursor-pointer"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-[#222] rounded-xl transition text-blue-500 dark:text-blue-400 cursor-pointer"
             >
               <Shield className="w-5 h-5" />
             </Link>
@@ -2940,10 +2943,10 @@ export default function Home() {
                 <img
                   src={userAvatar}
                   alt=""
-                  className="w-8 h-8 rounded-full object-cover border border-gray-700 pointer-events-none"
+                  className="w-8 h-8 rounded-full object-cover border border-gray-300 dark:border-gray-700 pointer-events-none"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-[#222] flex items-center justify-center border border-gray-700 text-gray-300">
+                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-[#222] flex items-center justify-center border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300">
                   <User className="w-4 h-4" />
                 </div>
               )}
@@ -2951,7 +2954,7 @@ export default function Home() {
           ) : (
             <Link
               href="/login"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black text-xs font-bold rounded-full hover:opacity-90 transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-black text-xs font-bold rounded-full hover:opacity-90 transition cursor-pointer"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Войти</span>
@@ -2962,7 +2965,7 @@ export default function Home() {
 
       <main className="flex-1 relative z-10 max-w-xl w-full mx-auto flex flex-col pb-24">
         {isBanned && (
-          <div className="m-4 p-4 bg-rose-950/30 border border-rose-900/50 rounded-2xl text-rose-300 flex items-center gap-3 shadow-sm">
+          <div className="m-4 p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-2xl text-rose-600 dark:text-rose-300 flex items-center gap-3 shadow-sm">
             <ShieldAlert className="w-5 h-5 shrink-0 text-rose-500" />
             <div className="text-xs font-semibold leading-relaxed">
               Ваш аккаунт заблокирован модератором. Вы не можете оставлять
@@ -2972,11 +2975,11 @@ export default function Home() {
         )}
 
         {isAdmin && (
-          <div className="bg-[#181818] p-4 border-b border-gray-800 shadow-sm">
+          <div className="bg-white dark:bg-[#181818] p-4 border-b border-gray-200 dark:border-gray-800 shadow-sm">
             {!showQuickPost ? (
               <button
                 onClick={() => setShowQuickPost(true)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600/10 text-blue-400 font-bold rounded-xl text-xs hover:bg-blue-600/20 transition active:scale-95 border border-blue-500/20 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400 font-bold rounded-xl text-xs hover:bg-blue-100 dark:hover:bg-blue-600/20 transition active:scale-95 border border-blue-200 dark:border-blue-500/20 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" />
                 Создать новую публикацию
@@ -2984,7 +2987,7 @@ export default function Home() {
             ) : (
               <form onSubmit={handleSaveQuickPost} className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                     <Shield className="w-3.5 h-3.5" />
                     {editingPostId
                       ? "Редактирование публикации"
@@ -2993,7 +2996,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={resetPostForm}
-                    className="text-xs text-gray-400 hover:text-red-400 flex items-center gap-1 cursor-pointer"
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 flex items-center gap-1 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" /> Закрыть
                   </button>
@@ -3002,23 +3005,23 @@ export default function Home() {
                   value={quickPostContent}
                   onChange={(e) => setQuickPostContent(e.target.value)}
                   placeholder="Что нового? (текст)..."
-                  className="w-full bg-[#111] border border-gray-800 text-white rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px] resize-none"
+                  className="w-full bg-[#f5f6f8] dark:bg-[#111] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px] resize-none"
                 />
-                <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 cursor-pointer pt-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-300 cursor-pointer pt-1">
                   <input
                     type="checkbox"
                     checked={quickIsPinned}
                     onChange={(e) => setQuickIsPinned(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-700 text-blue-600 bg-[#111]"
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-blue-600 bg-white dark:bg-[#111]"
                   />
                   <span>📌 Закрепить публикацию в начале ленты</span>
                 </label>
                 {quickMediaUrls.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2 p-2 bg-[#111] rounded-xl border border-gray-800">
+                  <div className="grid grid-cols-3 gap-2 p-2 bg-[#f5f6f8] dark:bg-[#111] rounded-xl border border-gray-200 dark:border-gray-800">
                     {quickMediaUrls.map((url, idx) => (
                       <div
                         key={idx}
-                        className="relative rounded-lg overflow-hidden aspect-square bg-black/40 flex items-center justify-center"
+                        className="relative rounded-lg overflow-hidden aspect-square bg-black/5 dark:bg-black/40 flex items-center justify-center"
                       >
                         {isVideoUrl(url) ? (
                           <video
@@ -3026,11 +3029,11 @@ export default function Home() {
                             className="w-full h-full object-cover"
                           />
                         ) : isAudioUrl(url) ? (
-                          <div className="w-full h-full flex items-center justify-center bg-blue-500/10 text-blue-400">
+                          <div className="w-full h-full flex items-center justify-center bg-blue-50 dark:bg-blue-500/10 text-blue-500 dark:text-blue-400">
                             <Volume2 className="w-5 h-5" />
                           </div>
                         ) : isDocumentUrl(url) ? (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-gray-400">
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
                             <FileText className="w-5 h-5 mb-1" />
                             <span className="text-[8px] font-mono truncate px-1 w-full text-center">
                               {getCleanFileName(url)}
@@ -3050,7 +3053,7 @@ export default function Home() {
                               prev.filter((_, i) => i !== idx),
                             )
                           }
-                          className="absolute top-1 right-1 p-1 bg-black/80 text-white rounded-full hover:scale-110 active:scale-95 transition cursor-pointer"
+                          className="absolute top-1 right-1 p-1 bg-black/60 dark:bg-black/80 text-white rounded-full hover:scale-110 active:scale-95 transition cursor-pointer"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -3071,12 +3074,12 @@ export default function Home() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingFile}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-[#111] border border-gray-800 rounded-xl text-xs font-semibold text-gray-300 hover:border-blue-500 transition disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-[#f5f6f8] dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 hover:border-blue-500 transition disabled:opacity-50 cursor-pointer"
                   >
                     {uploadingFile ? (
-                      <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 animate-spin" />
                     ) : (
-                      <Paperclip className="w-3.5 h-3.5 text-blue-400" />
+                      <Paperclip className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
                     )}
                     <span className="hidden sm:inline">
                       {uploadingFile ? uploadProgressText : "Файлы"}
@@ -3089,7 +3092,7 @@ export default function Home() {
                       setShowVideoRecorder(true);
                       startCamera(facingMode);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-rose-950/20 border border-rose-950/40 rounded-xl text-xs font-semibold text-rose-400 hover:border-rose-500 transition disabled:opacity-50 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-950/40 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:border-rose-500 transition disabled:opacity-50 cursor-pointer"
                   >
                     <Video className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Кружок</span>
@@ -3099,7 +3102,7 @@ export default function Home() {
                     ref={linkInputRef}
                     type="url"
                     placeholder="Ссылка..."
-                    className="flex-1 bg-[#111] border border-gray-800 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
+                    className="flex-1 bg-[#f5f6f8] dark:bg-[#111] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
                   />
                 </div>
                 <button
@@ -3120,7 +3123,7 @@ export default function Home() {
 
         {sortedPosts.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500 min-h-[40vh]">
-            <p className="font-medium text-gray-400 text-center text-xs">
+            <p className="font-medium text-gray-500 dark:text-gray-400 text-center text-xs">
               Пока нет публикаций
             </p>
           </div>
@@ -3165,8 +3168,8 @@ export default function Home() {
                   ref={(el) => {
                     postRefs.current[post.id] = el as HTMLElement | null;
                   }}
-                  className={`bg-[#0a0a0a] px-4 py-4 sm:px-5 sm:py-5 border-b border-gray-900 relative group transition-colors ${
-                    post.is_pinned ? "bg-blue-900/5" : ""
+                  className={`bg-white dark:bg-[#0a0a0a] px-4 py-4 sm:px-5 sm:py-5 border-b border-gray-200 dark:border-gray-900 relative group transition-colors ${
+                    post.is_pinned ? "bg-blue-50/40 dark:bg-blue-900/5" : ""
                   }`}
                 >
                   {/* POST HEADER: MUALLIF VA VAQT */}
@@ -3178,11 +3181,11 @@ export default function Home() {
                       <img
                         src={adminAvatar}
                         alt="Urokov"
-                        className="w-10 h-10 rounded-full object-cover border border-gray-800"
+                        className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-800"
                       />
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1">
-                          <span className="text-[14px] font-bold text-gray-100 leading-none group-hover:text-blue-400 transition">
+                          <span className="text-[14px] font-bold text-gray-900 dark:text-gray-100 leading-none group-hover:text-blue-500 dark:group-hover:text-blue-400 transition">
                             Urokov
                           </span>
                           <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
@@ -3190,7 +3193,7 @@ export default function Home() {
                             <Pin className="w-3 h-3 ml-1 text-blue-500 fill-current rotate-45" />
                           )}
                         </div>
-                        <span className="text-[11px] text-gray-500 font-mono mt-1">
+                        <span className="text-[11px] text-gray-500 dark:text-gray-500 font-mono mt-1">
                           {formattedDate}
                         </span>
                       </div>
@@ -3233,7 +3236,7 @@ export default function Home() {
                         {mediaList.length === 1 ? (
                           <div>
                             {getYouTubeVideoId(mediaList[0]) ? (
-                              <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-900 bg-black">
+                              <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-200 dark:border-gray-900 bg-black">
                                 <iframe
                                   src={`https://www.youtube-nocookie.com/embed/${getYouTubeVideoId(mediaList[0])}`}
                                   title="YouTube video player"
@@ -3310,7 +3313,7 @@ export default function Home() {
                         }}
                         className={`text-[13px] font-medium transition ${
                           isAdmin && postReactions.length > 0
-                            ? "hover:text-red-500 cursor-pointer text-gray-200"
+                            ? "hover:text-red-500 cursor-pointer text-gray-700 dark:text-gray-200"
                             : "cursor-default text-gray-500"
                         }`}
                       >
@@ -3356,7 +3359,7 @@ export default function Home() {
                   {isCommentOpen && (
                     <div className="mt-2 pt-2 space-y-2 animate-in fade-in">
                       {replyingToComment && (
-                        <div className="flex items-center justify-between px-3 py-1.5 bg-blue-950/40 border border-blue-900/40 rounded-xl text-xs text-blue-400 mb-2">
+                        <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 rounded-xl text-xs text-blue-600 dark:text-blue-400 mb-2">
                           <span className="truncate">
                             Ответ:{" "}
                             <strong className="font-semibold">
@@ -3381,7 +3384,7 @@ export default function Home() {
                               setReplyingToComment(null);
                               setNewCommentText("");
                             }}
-                            className="p-1 hover:bg-blue-900/50 rounded-lg transition cursor-pointer"
+                            className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition cursor-pointer"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -3398,20 +3401,20 @@ export default function Home() {
                               e.key === "Enter" && handleAddComment(post.id)
                             }
                             placeholder="Комментарий..."
-                            className="flex-1 bg-[#111] border border-gray-800 text-white rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="flex-1 bg-[#f5f6f8] dark:bg-[#111] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                           <button
                             onClick={() => handleAddComment(post.id)}
                             disabled={
                               isSubmittingComment || !newCommentText.trim()
                             }
-                            className="p-2 bg-white text-black rounded-xl hover:opacity-90 disabled:opacity-40 transition cursor-pointer"
+                            className="p-2 bg-blue-500 text-white dark:bg-white dark:text-black rounded-xl hover:opacity-90 disabled:opacity-40 transition cursor-pointer"
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ) : (
-                        <div className="text-[11px] text-rose-400 font-semibold px-2 py-1 text-center bg-rose-950/20 rounded-xl">
+                        <div className="text-[11px] text-rose-500 dark:text-rose-400 font-semibold px-2 py-1 text-center bg-rose-50 dark:bg-rose-950/20 rounded-xl">
                           Комментирование недоступно
                         </div>
                       )}
