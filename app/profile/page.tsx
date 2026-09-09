@@ -178,24 +178,21 @@ export default function ProfilePage() {
 
   useEffect(() => {
     let isMounted = true;
-
     const loadProfileData = async () => {
       const {
         data: { session: curSession },
       } = await supabase.auth.getSession();
-
       if (!curSession) {
         router.push("/login");
         return;
       }
-
       if (!isMounted) return;
       setSession(curSession);
-
       const userEmail = curSession.user.email?.toLowerCase().trim() || "";
       const userId = curSession.user.id;
       const isAdminUser = userEmail === ADMIN_EMAIL.toLowerCase().trim();
 
+      // 1) O'z profil qatorini olish (kerak bo'lsa yaratish)
       let { data: profile } = await supabase
         .from("profiles")
         .select("*")
@@ -236,10 +233,38 @@ export default function ProfilePage() {
         setAvatarUrl(curSession.user.user_metadata?.avatar_url || "");
       }
 
-      const { data: allProfs } = await supabase
-        .from("profiles")
-        .select("email, full_name, username, avatar_url");
-      if (allProfs && isMounted) {
+      // ⚡ 2) Qolgan HAMMA so'rovni PARALLEL qilamiz,
+      //     va reactions/comments'ni ENDI SERVERDA filtrlaymiz (butun jadval emas!)
+      const orFilter = `user_email.eq.${userEmail},user_id.eq.${userId}`;
+      const [
+        { data: allProfs },
+        { data: sts },
+        { data: allPosts },
+        { data: rawReactions },
+        { data: rawComments },
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("email, full_name, username, avatar_url"),
+        isAdminUser
+          ? supabase
+              .from("stories")
+              .select("*")
+              .ilike("user_email", userEmail)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] as Story[] }),
+        supabase.from("posts").select("id, content"),
+        supabase.from("reactions").select("*").or(orFilter),
+        supabase
+          .from("comments")
+          .select("*")
+          .or(orFilter)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (!isMounted) return;
+
+      if (allProfs) {
         const map: Record<string, ProfileData> = {};
         allProfs.forEach((p: ProfileData & { email?: string }) => {
           if (p.email) map[p.email.toLowerCase().trim()] = p;
@@ -248,93 +273,54 @@ export default function ProfilePage() {
       }
 
       if (isAdminUser) {
-        const { data: sts } = await supabase
-          .from("stories")
-          .select("*")
-          .ilike("user_email", userEmail)
-          .order("created_at", { ascending: false });
-        if (isMounted && sts) setMyStories(sts);
-
-        const { data: stViews } = await supabase
-          .from("story_views")
-          .select("*");
-        if (isMounted && stViews) setStoryViews(stViews);
-      } else if (isMounted) {
+        setMyStories(sts || []);
+        const storyIds = (sts || []).map((s) => s.id);
+        if (storyIds.length > 0) {
+          // ⚡ Endi faqat O'Z storylaringizga tegishli view'larni olamiz
+          const { data: stViews } = await supabase
+            .from("story_views")
+            .select("*")
+            .in("story_id", storyIds);
+          if (isMounted && stViews) setStoryViews(stViews);
+        } else {
+          setStoryViews([]);
+        }
+      } else {
         setMyStories([]);
         setStoryViews([]);
       }
 
-      const { data: allPosts } = await supabase
-        .from("posts")
-        .select("id, content");
       const postMap: Record<number, string> = {};
       allPosts?.forEach((p: { id: number; content?: string }) => {
         postMap[p.id] = p.content?.trim() || "Медиа публикация";
       });
 
-      const { data: rawReactions } = await supabase
-        .from("reactions")
-        .select("*");
-
-      if (rawReactions && rawReactions.length > 0) {
-        const myReactions = rawReactions.filter(
-          (r: Record<string, unknown>) => {
-            const rEmail = (r.user_email || r.email || "")
-              .toString()
-              .toLowerCase()
-              .trim();
-            const rUserId = (r.user_id || "").toString().trim();
-            return (
-              (rEmail && rEmail === userEmail) ||
-              (rUserId && rUserId === userId)
-            );
-          },
-        );
-
-        const formattedLikes = myReactions.map(
-          (r: Record<string, unknown>) => ({
+      if (rawReactions) {
+        setLikedPosts(
+          rawReactions.map((r: Record<string, unknown>) => ({
             id: Number(r.id),
             post_id: Number(r.post_id),
             created_at: String(r.created_at || ""),
             post_content:
               postMap[Number(r.post_id)] || "Публикация #" + r.post_id,
-          }),
+          })),
         );
-        if (isMounted) setLikedPosts(formattedLikes);
-      } else if (isMounted) {
+      } else {
         setLikedPosts([]);
       }
 
-      const { data: rawComments } = await supabase
-        .from("comments")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (rawComments && rawComments.length > 0) {
-        const myComments = rawComments.filter((c: Record<string, unknown>) => {
-          const cEmail = (c.user_email || c.email || "")
-            .toString()
-            .toLowerCase()
-            .trim();
-          const cUserId = (c.user_id || "").toString().trim();
-          return (
-            (cEmail && cEmail === userEmail) || (cUserId && cUserId === userId)
-          );
-        });
-
-        if (isMounted) {
-          setUserComments(
-            myComments.map((c: Record<string, unknown>) => ({
-              id: c.id as string | number,
-              post_id: Number(c.post_id),
-              content: String(c.content || ""),
-              created_at: String(c.created_at || ""),
-              post_content:
-                postMap[Number(c.post_id)] || "Публикация #" + c.post_id,
-            })),
-          );
-        }
-      } else if (isMounted) {
+      if (rawComments) {
+        setUserComments(
+          rawComments.map((c: Record<string, unknown>) => ({
+            id: c.id as string | number,
+            post_id: Number(c.post_id),
+            content: String(c.content || ""),
+            created_at: String(c.created_at || ""),
+            post_content:
+              postMap[Number(c.post_id)] || "Публикация #" + c.post_id,
+          })),
+        );
+      } else {
         setUserComments([]);
       }
 
@@ -351,13 +337,11 @@ export default function ProfilePage() {
   const handleSelectStoryFile = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    if (!isAdmin) return;
+    if (!isAdmin || !session?.user?.email) return;
     const file = e.target.files?.[0];
-    if (!file || !session?.user?.email) return;
+    if (!file) return;
 
-    const email = session.user.email.toLowerCase().trim();
     const maxMb = 100;
-
     if (file.size > maxMb * 1024 * 1024) {
       alert(`Размер файла не должен превышать ${maxMb} МБ!`);
       return;
@@ -385,7 +369,7 @@ export default function ProfilePage() {
         .from("stories")
         .insert([
           {
-            user_email: email,
+            user_email: session.user.email.toLowerCase().trim(),
             media_url: urlData.publicUrl,
             media_type: isVideo ? "video" : "image",
             duration_days: 1,

@@ -37,6 +37,7 @@ import {
   SwitchCamera,
   FileText,
   ShieldCheck,
+  ExternalLink,
 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { ThemeToggle } from "../components/theme-toggle";
@@ -48,6 +49,31 @@ import { ChatHub } from "../components/chat-hub";
 const getTempId = () => Math.floor(Math.random() * 100000000);
 const getNowIso = () => new Date().toISOString();
 const getRandomStr = () => Math.random().toString(36).substring(2, 9);
+
+// --- SESSIYA ICHI KESH (navigatsiya tezligi uchun) ---
+const CACHE_VERSION = "v1";
+
+function readCache<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = sessionStorage.getItem(`feed_cache_${CACHE_VERSION}_${key}`);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeCache<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(
+      `feed_cache_${CACHE_VERSION}_${key}`,
+      JSON.stringify(value),
+    );
+  } catch {
+    /* kesh yozib bo'lmasa ham dastur ishlashda davom etadi */
+  }
+}
 
 function getCleanFileName(url: string, fallback: string = "Файл") {
   try {
@@ -266,7 +292,6 @@ function TelegramAudioPlayer({ src }: { src: string }) {
   const togglePlay = () => {
     if (!audioRef.current) return;
 
-    // Boshqa audiolarni to'xtatish
     if (!isPlaying) {
       const allAudios = document.querySelectorAll("audio");
       allAudios.forEach((a) => {
@@ -298,7 +323,6 @@ function TelegramAudioPlayer({ src }: { src: string }) {
 
   const handleEnded = () => {
     setIsPlaying(false);
-    // Keyingi pleyerni topib avtomatik ishga tushirish (Playlist effekti)
     const buttons = Array.from(
       document.querySelectorAll('[data-audio-player="true"] .audio-play-btn'),
     ) as HTMLButtonElement[];
@@ -497,7 +521,6 @@ function InstagramCarousel({
     setCurrentIndex((prev) => (prev === urls.length - 1 ? 0 : prev + 1));
   };
 
-  // Touch Screen and Pointer (Mouse swipe) logic
   const handlePointerDown = (e: React.PointerEvent) => {
     touchStartX.current = e.clientX;
     try {
@@ -606,6 +629,7 @@ interface ProfileData {
   username?: string;
   full_name?: string;
   avatar_url?: string;
+  status?: string;
   [key: string]: unknown;
 }
 interface Comment {
@@ -658,7 +682,8 @@ interface StoryLike {
 
 export default function Home() {
   const router = useRouter();
-  const [loadingSplash, setLoadingSplash] = useState(true);
+  const [loadingSplash, setLoadingSplash] = useState(false);
+
   const [session, setSession] = useState<Session | null>(null);
   const sessionRef = useRef<Session | null>(null);
 
@@ -668,10 +693,18 @@ export default function Home() {
   const isAdmin = myEmail === ADMIN_EMAIL.toLowerCase().trim();
 
   const [isBanned, setIsBanned] = useState(false);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
-  const [reactions, setReactions] = useState<Reaction[]>([]);
-  const [comments, setComments] = useState<Comment[]>([]);
+
+  // ⚡ KESHLASHDAN FOYDALANIB USESTATENI BOSHLASH
+  const [posts, setPosts] = useState<Post[]>(() => readCache("posts", []));
+  const [profiles, setProfiles] = useState<Record<string, ProfileData>>(() =>
+    readCache("profiles", {}),
+  );
+  const [reactions, setReactions] = useState<Reaction[]>(() =>
+    readCache("reactions", []),
+  );
+  const [comments, setComments] = useState<Comment[]>(() =>
+    readCache("comments", []),
+  );
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -712,9 +745,16 @@ export default function Home() {
     type: string;
   } | null>(null);
 
-  const [stories, setStories] = useState<Story[]>([]);
-  const [storyViews, setStoryViews] = useState<StoryView[]>([]);
-  const [storyLikes, setStoryLikes] = useState<StoryLike[]>([]);
+  // ⚡ KESHLASHDAN FOYDALANIB USESTATENI BOSHLASH
+  const [stories, setStories] = useState<Story[]>(() =>
+    readCache("stories", []),
+  );
+  const [storyViews, setStoryViews] = useState<StoryView[]>(() =>
+    readCache("storyViews", []),
+  );
+  const [storyLikes, setStoryLikes] = useState<StoryLike[]>(() =>
+    readCache("storyLikes", []),
+  );
   const [showCreateStory, setShowCreateStory] = useState(false);
   const [storyFile, setStoryFile] = useState<File | null>(null);
   const [storyPreview, setStoryPreview] = useState<string | null>(null);
@@ -797,6 +837,7 @@ export default function Home() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showNotifications]);
 
+  // ⚡ 3-QADAM: ASOSIY USEEFFECT TO'LIQ ALMASHTIRILDI
   useEffect(() => {
     let isMounted = true;
 
@@ -806,21 +847,32 @@ export default function Home() {
       sessionRef.current = curSession;
 
       if (curSession?.user?.email) {
+        router.prefetch("/profile");
         const email = curSession.user.email.toLowerCase().trim();
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("status")
-          .eq("email", email)
-          .single();
-        setIsBanned(prof?.status === "banned");
 
-        const { data: notifs } = await supabase
-          .from("notifications")
-          .select("*")
-          .eq("user_email", email)
-          .order("created_at", { ascending: false });
-        if (notifs) setNotifications(notifs);
+        // ⚡ Ikkita so'rovni PARALLEL qilamiz (ilgari ketma-ket edi)
+        const [{ data: prof }, { data: notifs }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("status")
+            .eq("email", email)
+            .single(),
+          supabase
+            .from("notifications")
+            .select("*")
+            .eq("user_email", email)
+            .order("created_at", { ascending: false })
+            .limit(50),
+        ]);
+
+        if (!isMounted) return;
+        setIsBanned(prof?.status === "banned");
+        if (notifs) {
+          setNotifications(notifs);
+          writeCache("notifications", notifs);
+        }
       } else {
+        router.prefetch("/login");
         setIsBanned(false);
         setNotifications([]);
       }
@@ -831,6 +883,7 @@ export default function Home() {
       .then(({ data: { session: curSession } }) =>
         checkSessionAndRole(curSession),
       );
+
     const {
       data: { subscription: authSub },
     } = supabase.auth.onAuthStateChange((_e, curSession) =>
@@ -838,6 +891,7 @@ export default function Home() {
     );
 
     const loadData = async () => {
+      // PROFILES — hammasi kerak (chat va izohlarda ishlatiladi)
       const { data: profs } = await supabase
         .from("profiles")
         .select("email, full_name, username, avatar_url");
@@ -846,274 +900,320 @@ export default function Home() {
         profs.forEach((p) => {
           if (p.email) map[p.email.toLowerCase().trim()] = p;
         });
-        if (isMounted) setProfiles(map);
+        if (isMounted) {
+          setProfiles(map);
+          writeCache("profiles", map);
+        }
       }
 
+      // ⚡ POSTS — endi LIMIT bilan (oldin cheksiz edi)
       const { data: pts } = await supabase
         .from("posts")
         .select("*")
-        .order("created_at", { ascending: false });
-      if (isMounted && pts) setPosts(pts);
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (isMounted && pts) {
+        setPosts(pts);
+        writeCache("posts", pts);
+      }
 
-      const { data: rcts } = await supabase.from("reactions").select("*");
+      // ⚡ Faqat yuklangan postlarga tegishli reaction/comment olamiz
+      const postIds = (pts || []).map((p) => p.id);
+      const safePostIds = postIds.length > 0 ? postIds : [-1];
+
+      const { data: rcts } = await supabase
+        .from("reactions")
+        .select("*")
+        .in("post_id", safePostIds);
       if (isMounted && rcts) {
-        setReactions(
-          rcts.map((r: Record<string, unknown>) => ({
-            id: Number(r.id),
-            post_id: Number(r.post_id),
-            user_email: String(r.user_email || r.email || "")
-              .toLowerCase()
-              .trim(),
-            emoji: String(r.emoji || "❤️"),
-            created_at: String(r.created_at || "2024-01-01T00:00:00.000Z"),
-          })),
-        );
+        const parsed = rcts.map((r: Record<string, unknown>) => ({
+          id: Number(r.id),
+          post_id: Number(r.post_id),
+          user_email: String(r.user_email || r.email || "")
+            .toLowerCase()
+            .trim(),
+          emoji: String(r.emoji || "❤️"),
+          created_at: String(r.created_at || "2024-01-01T00:00:00.000Z"),
+        }));
+        setReactions(parsed);
+        writeCache("reactions", parsed);
       }
 
       const { data: cmts } = await supabase
         .from("comments")
         .select("*")
+        .in("post_id", safePostIds)
         .order("created_at", { ascending: true });
-      if (isMounted && cmts) setComments(cmts);
+      if (isMounted && cmts) {
+        setComments(cmts);
+        writeCache("comments", cmts);
+      }
 
+      // ⚡ STORIES — faqat muddati o'tmaganlarini olamiz
+      const nowIso = new Date().toISOString();
       const { data: sts } = await supabase
         .from("stories")
         .select("*")
+        .gt("expires_at", nowIso)
         .order("created_at", { ascending: false });
-      if (isMounted && sts) setStories(sts);
-
-      const { data: stViews } = await supabase.from("story_views").select("*");
-      if (isMounted && stViews) {
-        setStoryViews(
-          stViews.map((v: Record<string, unknown>) => ({
-            id: Number(v.id),
-            story_id: Number(v.story_id),
-            viewer_email: String(v.viewer_email).toLowerCase().trim(),
-            viewed_at: String(v.viewed_at || "2024-01-01T00:00:00.000Z"),
-          })),
-        );
+      if (isMounted && sts) {
+        setStories(sts);
+        writeCache("stories", sts);
       }
 
-      const { data: stLikes } = await supabase.from("story_likes").select("*");
+      const storyIds = (sts || []).map((s) => s.id);
+      const safeStoryIds = storyIds.length > 0 ? storyIds : [-1];
+
+      const { data: stViews } = await supabase
+        .from("story_views")
+        .select("*")
+        .in("story_id", safeStoryIds);
+      if (isMounted && stViews) {
+        const parsed = stViews.map((v: Record<string, unknown>) => ({
+          id: Number(v.id),
+          story_id: Number(v.story_id),
+          viewer_email: String(v.viewer_email).toLowerCase().trim(),
+          viewed_at: String(v.viewed_at || "2024-01-01T00:00:00.000Z"),
+        }));
+        setStoryViews(parsed);
+        writeCache("storyViews", parsed);
+      }
+
+      const { data: stLikes } = await supabase
+        .from("story_likes")
+        .select("*")
+        .in("story_id", safeStoryIds);
       if (isMounted && stLikes) {
-        setStoryLikes(
-          stLikes.map((l: Record<string, unknown>) => ({
-            id: Number(l.id),
-            story_id: Number(l.story_id),
-            user_email: String(l.user_email).toLowerCase().trim(),
-            created_at: String(l.created_at || "2024-01-01T00:00:00.000Z"),
-          })),
-        );
+        const parsed = stLikes.map((l: Record<string, unknown>) => ({
+          id: Number(l.id),
+          story_id: Number(l.story_id),
+          user_email: String(l.user_email).toLowerCase().trim(),
+          created_at: String(l.created_at || "2024-01-01T00:00:00.000Z"),
+        }));
+        setStoryLikes(parsed);
+        writeCache("storyLikes", parsed);
       }
     };
 
     loadData();
 
+    // ⚡ Realtime: butun schema o'rniga faqat kerakli 7 jadvalga obuna bo'lamiz
     const channelName = `realtime-feed-${getRandomStr()}`;
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public" },
-        async (payload) => {
-          if (!isMounted) return;
-          const { table, eventType: event } = payload;
+    const channel = supabase.channel(channelName);
 
-          if (table === "posts") {
-            if (event === "INSERT")
-              setPosts((prev) => [
-                payload.new as Post,
-                ...prev.filter((p) => p.id !== (payload.new as Post).id),
-              ]);
-            else if (event === "UPDATE")
-              setPosts((prev) =>
-                prev.map((p) =>
-                  p.id === (payload.new as Post).id ? (payload.new as Post) : p,
-                ),
-              );
-            else if (event === "DELETE")
-              setPosts((prev) =>
-                prev.filter((p) => p.id !== (payload.old as { id: number }).id),
-              );
-          } else if (table === "comments") {
-            if (event === "INSERT") {
-              const newC = payload.new as Comment;
-              setComments((prev) => {
-                if (prev.some((c) => String(c.id) === String(newC.id)))
-                  return prev;
+    const handleChange = async (payload: {
+      table: string;
+      eventType: string;
+      new: unknown;
+      old: unknown;
+    }) => {
+      if (!isMounted) return;
+      const { table, eventType: event } = payload;
 
-                const tempMatch = prev.find(
-                  (c) =>
-                    String(c.id).startsWith("temp_") &&
-                    c.user_email === newC.user_email &&
-                    c.content === newC.content &&
-                    String(c.post_id) === String(newC.post_id),
-                );
-
-                if (tempMatch) {
-                  return prev.map((c) => (c.id === tempMatch.id ? newC : c));
-                }
-
-                return [...prev, newC];
-              });
-            } else if (event === "UPDATE") {
-              setComments((prev) =>
-                prev.map((c) =>
-                  String(c.id) === String((payload.new as Comment).id)
-                    ? (payload.new as Comment)
-                    : c,
+      if (table === "posts") {
+        if (event === "INSERT")
+          setPosts((prev) => [
+            payload.new as Post,
+            ...prev.filter((p) => p.id !== (payload.new as Post).id),
+          ]);
+        else if (event === "UPDATE")
+          setPosts((prev) =>
+            prev.map((p) =>
+              p.id === (payload.new as Post).id ? (payload.new as Post) : p,
+            ),
+          );
+        else if (event === "DELETE")
+          setPosts((prev) =>
+            prev.filter((p) => p.id !== (payload.old as { id: number }).id),
+          );
+      } else if (table === "comments") {
+        if (event === "INSERT") {
+          const newC = payload.new as Comment;
+          setComments((prev) => {
+            if (prev.some((c) => String(c.id) === String(newC.id))) return prev;
+            const tempMatch = prev.find(
+              (c) =>
+                String(c.id).startsWith("temp_") &&
+                c.user_email === newC.user_email &&
+                c.content === newC.content &&
+                String(c.post_id) === String(newC.post_id),
+            );
+            if (tempMatch)
+              return prev.map((c) => (c.id === tempMatch.id ? newC : c));
+            return [...prev, newC];
+          });
+        } else if (event === "UPDATE") {
+          setComments((prev) =>
+            prev.map((c) =>
+              String(c.id) === String((payload.new as Comment).id)
+                ? (payload.new as Comment)
+                : c,
+            ),
+          );
+        } else if (event === "DELETE") {
+          setComments((prev) =>
+            prev.filter(
+              (c) =>
+                String(c.id) !== String((payload.old as { id: string }).id),
+            ),
+          );
+        }
+      } else if (table === "reactions") {
+        if (event === "INSERT") {
+          const newR = payload.new as Record<string, unknown>;
+          const parsedR: Reaction = {
+            id: Number(newR.id),
+            post_id: Number(newR.post_id),
+            user_email: String(newR.user_email || newR.email || "")
+              .toLowerCase()
+              .trim(),
+            emoji: String(newR.emoji || "❤️"),
+            created_at: String(newR.created_at || getNowIso()),
+          };
+          setReactions((prev) => {
+            const filtered = prev.filter(
+              (r) =>
+                !(
+                  String(r.post_id) === String(parsedR.post_id) &&
+                  r.user_email === parsedR.user_email
                 ),
-              );
-            } else if (event === "DELETE") {
-              setComments((prev) =>
-                prev.filter(
-                  (c) =>
-                    String(c.id) !== String((payload.old as { id: string }).id),
+            );
+            return [...filtered, parsedR];
+          });
+        } else if (event === "DELETE") {
+          setReactions((prev) =>
+            prev.filter(
+              (r) =>
+                String(r.id) !== String((payload.old as { id: number }).id),
+            ),
+          );
+        }
+      } else if (table === "story_likes") {
+        if (event === "INSERT") {
+          const newL = payload.new as Record<string, unknown>;
+          const parsedL: StoryLike = {
+            id: Number(newL.id) || getTempId(),
+            story_id: Number(newL.story_id),
+            user_email: String(newL.user_email).toLowerCase().trim(),
+            created_at: String(newL.created_at || getNowIso()),
+          };
+          setStoryLikes((prev) => {
+            const filtered = prev.filter(
+              (l) =>
+                !(
+                  String(l.story_id) === String(parsedL.story_id) &&
+                  l.user_email === parsedL.user_email
                 ),
-              );
-            }
-          } else if (table === "reactions") {
-            if (event === "INSERT") {
-              const newR = payload.new as Record<string, unknown>;
-              const parsedR: Reaction = {
-                id: Number(newR.id),
-                post_id: Number(newR.post_id),
-                user_email: String(newR.user_email || newR.email || "")
-                  .toLowerCase()
-                  .trim(),
-                emoji: String(newR.emoji || "❤️"),
-                created_at: String(newR.created_at || getNowIso()),
-              };
-              setReactions((prev) => {
-                const filtered = prev.filter(
-                  (r) =>
-                    !(
-                      String(r.post_id) === String(parsedR.post_id) &&
-                      r.user_email === parsedR.user_email
-                    ),
-                );
-                return [...filtered, parsedR];
-              });
-            } else if (event === "DELETE") {
-              setReactions((prev) =>
-                prev.filter(
-                  (r) =>
-                    String(r.id) !== String((payload.old as { id: number }).id),
-                ),
-              );
-            }
-          } else if (table === "story_likes") {
-            if (event === "INSERT") {
-              const newL = payload.new as Record<string, unknown>;
-              const parsedL: StoryLike = {
-                id: Number(newL.id) || getTempId(),
-                story_id: Number(newL.story_id),
-                user_email: String(newL.user_email).toLowerCase().trim(),
-                created_at: String(newL.created_at || getNowIso()),
-              };
-              setStoryLikes((prev) => {
-                const filtered = prev.filter(
-                  (l) =>
-                    !(
-                      String(l.story_id) === String(parsedL.story_id) &&
-                      l.user_email === parsedL.user_email
-                    ),
-                );
-                return [...filtered, parsedL];
-              });
-            } else if (event === "DELETE") {
-              setStoryLikes((prev) =>
-                prev.filter(
-                  (l) =>
-                    String(l.id) !== String((payload.old as { id: number }).id),
-                ),
-              );
-            }
-          } else if (table === "story_views") {
-            if (event === "INSERT") {
-              const newV = payload.new as Record<string, unknown>;
-              const parsedV: StoryView = {
-                id: Number(newV.id) || getTempId(),
-                story_id: Number(newV.story_id),
-                viewer_email: String(newV.viewer_email).toLowerCase().trim(),
-                viewed_at: String(newV.viewed_at || getNowIso()),
-              };
-              setStoryViews((prev) => {
-                const exists = prev.some(
-                  (v) =>
-                    String(v.story_id) === String(parsedV.story_id) &&
-                    v.viewer_email === parsedV.viewer_email,
-                );
-                if (exists) return prev;
-                return [...prev, parsedV];
-              });
-            } else if (event === "DELETE") {
-              setStoryViews((prev) =>
-                prev.filter(
-                  (v) =>
-                    String(v.id) !== String((payload.old as { id: number }).id),
-                ),
-              );
-            }
-          } else if (table === "notifications") {
-            if (event === "INSERT") {
-              const newNotif = payload.new as NotificationItem;
-              const curEmail = sessionRef.current?.user?.email
-                ?.toLowerCase()
-                .trim();
-              if (
-                curEmail &&
-                newNotif.user_email?.toLowerCase().trim() === curEmail
-              ) {
-                playNotificationSound(newNotif.id);
-                setNotifications((prev) => [
-                  newNotif,
-                  ...prev.filter((n) => n.id !== newNotif.id),
-                ]);
-              }
-            } else if (event === "UPDATE") {
-              const upNotif = payload.new as NotificationItem;
-              setNotifications((prev) =>
-                prev.map((n) => (n.id === upNotif.id ? upNotif : n)),
-              );
-            } else if (event === "DELETE") {
-              setNotifications((prev) =>
-                prev.filter(
-                  (n) =>
-                    String(n.id) !== String((payload.old as { id: number }).id),
-                ),
-              );
-            }
-          } else if (table === "stories") {
-            if (event === "INSERT") {
-              const newStory = payload.new as Story;
-              setStories((prev) => [
-                newStory,
-                ...prev.filter((s) => String(s.id) !== String(newStory.id)),
-              ]);
-            } else if (event === "DELETE") {
-              setStories((prev) =>
-                prev.filter(
-                  (s) =>
-                    String(s.id) !== String((payload.old as { id: number }).id),
-                ),
-              );
-            }
+            );
+            return [...filtered, parsedL];
+          });
+        } else if (event === "DELETE") {
+          setStoryLikes((prev) =>
+            prev.filter(
+              (l) =>
+                String(l.id) !== String((payload.old as { id: number }).id),
+            ),
+          );
+        }
+      } else if (table === "story_views") {
+        if (event === "INSERT") {
+          const newV = payload.new as Record<string, unknown>;
+          const parsedV: StoryView = {
+            id: Number(newV.id) || getTempId(),
+            story_id: Number(newV.story_id),
+            viewer_email: String(newV.viewer_email).toLowerCase().trim(),
+            viewed_at: String(newV.viewed_at || getNowIso()),
+          };
+          setStoryViews((prev) => {
+            const exists = prev.some(
+              (v) =>
+                String(v.story_id) === String(parsedV.story_id) &&
+                v.viewer_email === parsedV.viewer_email,
+            );
+            if (exists) return prev;
+            return [...prev, parsedV];
+          });
+        } else if (event === "DELETE") {
+          setStoryViews((prev) =>
+            prev.filter(
+              (v) =>
+                String(v.id) !== String((payload.old as { id: number }).id),
+            ),
+          );
+        }
+      } else if (table === "notifications") {
+        if (event === "INSERT") {
+          const newNotif = payload.new as NotificationItem;
+          const curEmail = sessionRef.current?.user?.email
+            ?.toLowerCase()
+            .trim();
+          if (
+            curEmail &&
+            newNotif.user_email?.toLowerCase().trim() === curEmail
+          ) {
+            playNotificationSound(newNotif.id);
+            setNotifications((prev) => [
+              newNotif,
+              ...prev.filter((n) => n.id !== newNotif.id),
+            ]);
           }
-        },
-      )
-      .subscribe();
+        } else if (event === "UPDATE") {
+          const upNotif = payload.new as NotificationItem;
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === upNotif.id ? upNotif : n)),
+          );
+        } else if (event === "DELETE") {
+          setNotifications((prev) =>
+            prev.filter(
+              (n) =>
+                String(n.id) !== String((payload.old as { id: number }).id),
+            ),
+          );
+        }
+      } else if (table === "stories") {
+        if (event === "INSERT") {
+          const newStory = payload.new as Story;
+          setStories((prev) => [
+            newStory,
+            ...prev.filter((s) => String(s.id) !== String(newStory.id)),
+          ]);
+        } else if (event === "DELETE") {
+          setStories((prev) =>
+            prev.filter(
+              (s) =>
+                String(s.id) !== String((payload.old as { id: number }).id),
+            ),
+          );
+        }
+      }
+    };
 
-    const timer = setTimeout(() => {
-      if (isMounted) setLoadingSplash(false);
-    }, 3000);
+    (
+      [
+        "posts",
+        "comments",
+        "reactions",
+        "story_likes",
+        "story_views",
+        "notifications",
+        "stories",
+      ] as const
+    ).forEach((table) => {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table },
+        handleChange,
+      );
+    });
+
+    channel.subscribe();
+
     return () => {
       isMounted = false;
       authSub.unsubscribe();
       supabase.removeChannel(channel);
-      clearTimeout(timer);
     };
-  }, []);
+  }, [router]);
 
   const handleNotificationClick = async (notif: NotificationItem) => {
     if (!notif.is_read) {
@@ -1450,7 +1550,7 @@ export default function Home() {
 
     const maxMb = 100;
     if (file.size > maxMb * 1024 * 1024) {
-      alert(`Размер файла не должен превышать ${maxMb} МБ!`);
+      alert(`Размер файла не должен превышать ${maxMb} MB!`);
       return;
     }
 
@@ -1824,12 +1924,13 @@ export default function Home() {
         )}
 
         {igId && (
-          <div className="relative w-full max-w-[320px] mx-auto rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] mt-2">
+          <div className="relative w-full aspect-square max-w-[400px] mx-auto rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm bg-black mt-2">
             <iframe
               src={`https://www.instagram.com/p/${igId}/embed/`}
-              className="w-full h-[400px] border-0 overflow-hidden"
+              title="Instagram post"
+              className="w-full h-full border-0 scale-[1.02]"
               scrolling="no"
-              // @ts-expect-error - React allowtransparency typexatosi chiqmasligi uchun
+              // @ts-expect-error - React allowtransparency type xatosini oldini olish uchun
               allowtransparency="true"
               allow="encrypted-media"
             />
@@ -2022,18 +2123,7 @@ export default function Home() {
   };
 
   if (loadingSplash) {
-    return (
-      <div className="fixed inset-0 bg-black z-50 flex items-center justify-center overflow-hidden">
-        <video
-          autoPlay
-          muted
-          playsInline
-          className="w-full h-full object-cover pointer-events-none"
-        >
-          <source src="/intro.mp4" type="video/mp4" />
-        </video>
-      </div>
-    );
+    return null;
   }
 
   const userAvatar =
@@ -2576,11 +2666,6 @@ export default function Home() {
             </div>
 
             <div className="relative flex-1 w-full h-full flex items-center justify-center bg-black overflow-hidden">
-              {!isMediaLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
-                  <Loader2 className="w-8 h-8 animate-spin text-white" />
-                </div>
-              )}
               {currentStory.media_type === "video" ? (
                 <video
                   ref={videoRef}

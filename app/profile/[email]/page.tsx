@@ -1,15 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
-
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-
 import { supabase } from "../../../lib/supabase";
-
 import { useRouter, useParams } from "next/navigation";
-
 import type { Session } from "@supabase/supabase-js";
-
 import {
   ArrowLeft,
   User as UserIcon,
@@ -31,138 +26,100 @@ import {
   MessageSquare,
   Trash2,
 } from "lucide-react";
-
 import Link from "next/link";
-
 import { ChatHub } from "../../../components/chat-hub";
 
 const ADMIN_EMAIL = "urokov.me@gmail.com";
 
 const getTempId = () => Math.floor(Math.random() * 100000000);
-
 const getNowIso = () => new Date().toISOString();
 
+// --- TYPES & INTERFACES ---
 interface ProfileData {
   id?: string;
-
   email?: string;
-
   username?: string;
-
   full_name?: string;
-
   avatar_url?: string;
-
   status?: string;
-
   bio?: string;
-
   phone?: string;
-
   birth_date?: string;
-
   [key: string]: unknown;
 }
 
 interface Story {
   id: number;
-
   user_email: string;
-
   media_url: string;
-
   media_type: string;
-
   caption?: string;
-
   duration_days: number;
-
   expires_at: string;
-
   created_at: string;
 }
 
 interface StoryView {
   id: number;
-
   story_id: number;
-
   viewer_email: string;
-
   viewed_at: string;
 }
 
 interface StoryLike {
   id: number;
-
   story_id: number;
-
   user_email: string;
-
   created_at: string;
 }
 
 interface LikedItem {
   id: number;
-
   post_id: number;
-
   created_at: string;
-
   post_content?: string;
 }
 
 interface CommentedItem {
   id: string | number;
-
   post_id: number;
-
   content: string;
-
   created_at: string;
-
   post_content?: string;
+}
+
+interface ProfileViewItem {
+  id: number;
+  profile_email: string;
+  viewer_email: string;
+  viewed_at: string;
 }
 
 export default function UserPublicProfilePage() {
   const router = useRouter();
-
   const params = useParams();
-
   const rawParam = params?.email;
-
   const profileEmail = rawParam
     ? decodeURIComponent(String(rawParam)).toLowerCase().trim()
     : "";
 
   const [session, setSession] = useState<Session | null>(null);
-
   const [loading, setLoading] = useState(true);
-
   const [profile, setProfile] = useState<ProfileData | null>(null);
-
   const [profiles, setProfiles] = useState<Record<string, ProfileData>>({});
-
   const [isCurrentUserBanned, setIsCurrentUserBanned] = useState(false);
-
   const [isMuted, setIsMuted] = useState(false);
-
   const [amIBlocking, setAmIBlocking] = useState(false);
-
   const [spyTargetEmail, setSpyTargetEmail] = useState<string | undefined>(
     undefined,
   );
 
   const [userStories, setUserStories] = useState<Story[]>([]);
-
   const [storyViews, setStoryViews] = useState<StoryView[]>([]);
-
   const [storyLikes, setStoryLikes] = useState<StoryLike[]>([]);
 
   const [likedPosts, setLikedPosts] = useState<LikedItem[]>([]);
-
   const [userComments, setUserComments] = useState<CommentedItem[]>([]);
-
   const [activeModal, setActiveModal] = useState<"likes" | "comments" | null>(
     null,
   );
@@ -170,22 +127,19 @@ export default function UserPublicProfilePage() {
   const [viewingStoryIndex, setViewingStoryIndex] = useState<number | null>(
     null,
   );
-
   const [storyProgress, setStoryProgress] = useState(0);
-
   const [isStoryPaused, setIsStoryPaused] = useState(false);
-
   const [isMediaLoaded, setIsMediaLoaded] = useState(false);
-
   const [videoDuration, setVideoDuration] = useState(5);
-
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const viewedSessionTracker = useRef<Set<string>>(new Set());
-
   const [isZoomed, setIsZoomed] = useState(false);
 
-  // Faoliyat loglarini yozish yordamchi funksiyasi
+  const [profileViews, setProfileViews] = useState<ProfileViewItem[]>([]);
+  const [showProfileViewsModal, setShowProfileViewsModal] = useState(false);
+
+  // Faoliyat loglarini yozish
   const recordActivity = async (
     userEmail: string,
     action: string,
@@ -205,6 +159,35 @@ export default function UserPublicProfilePage() {
     }
   };
 
+  const currentEmail = session?.user?.email?.toLowerCase().trim() || "";
+  const isAdmin = currentEmail === ADMIN_EMAIL.toLowerCase().trim();
+
+  // Oxirgi 48 soat ichida admin profilini ko'rganlarni yuklash
+  const fetchAdminProfileViews = async () => {
+    if (!isAdmin) return;
+    const fortyEightHoursAgo = new Date(
+      Date.now() - 48 * 60 * 60 * 1000,
+    ).toISOString();
+
+    const { data, error } = await supabase
+      .from("profile_views")
+      .select("*")
+      .eq("profile_email", ADMIN_EMAIL.toLowerCase().trim())
+      .gte("viewed_at", fortyEightHoursAgo)
+      .order("viewed_at", { ascending: false });
+
+    if (error) {
+      console.error("Supabase Profile Views Error:", error);
+      alert(`Xatolik: ${error.message}`);
+      return;
+    }
+
+    if (data) {
+      setProfileViews(data);
+      setShowProfileViewsModal(true);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -214,239 +197,189 @@ export default function UserPublicProfilePage() {
       } = await supabase.auth.getSession();
 
       if (!isMounted) return;
-
       setSession(curSession);
-
       const viewerEmail = curSession?.user?.email?.toLowerCase().trim() || "";
 
       if (viewerEmail && profileEmail && viewerEmail === profileEmail) {
         router.replace("/profile");
-
         return;
       }
 
       if (!profileEmail) {
         setLoading(false);
-
         return;
       }
 
+      // 1) Profilni topish
       const { data: viewedProfileData } = await supabase
-
         .from("profiles")
-
         .select("*")
-
         .or(`email.ilike.${profileEmail},username.ilike.${profileEmail}`)
-
         .maybeSingle();
 
       if (!isMounted) return;
 
-      if (viewedProfileData) {
-        if (
-          viewerEmail &&
-          viewedProfileData.email?.toLowerCase().trim() === viewerEmail
-        ) {
-          router.replace("/profile");
+      if (!viewedProfileData) {
+        const { data: allProfs } = await supabase
+          .from("profiles")
+          .select("email, full_name, username, avatar_url, status");
 
-          return;
-        }
-
-        setProfile(viewedProfileData);
-
-        const targetEmail = viewedProfileData.email?.toLowerCase().trim() || "";
-
-        const targetId = viewedProfileData.id;
-
-        // 48 soatlik profil tashriflarini yozish
-        if (
-          viewerEmail &&
-          targetEmail === ADMIN_EMAIL.toLowerCase() &&
-          viewerEmail !== ADMIN_EMAIL.toLowerCase()
-        ) {
-          const recordAdminView = async () => {
-            await supabase.from("profile_views").insert([
-              {
-                profile_email: ADMIN_EMAIL.toLowerCase(),
-                viewer_email: viewerEmail,
-              },
-            ]);
-          };
-          recordAdminView();
-        }
-
-        if (viewerEmail && targetEmail) {
-          const { data: muteData } = await supabase
-
-            .from("chat_mutes")
-
-            .select("*")
-
-            .eq("user_email", viewerEmail)
-
-            .eq("target_email", targetEmail)
-
-            .maybeSingle();
-
-          setIsMuted(!!muteData);
-
-          const { data: blockData } = await supabase
-
-            .from("blocked_users")
-
-            .select("*")
-
-            .eq("blocker_email", viewerEmail)
-
-            .eq("blocked_email", targetEmail)
-
-            .maybeSingle();
-
-          setAmIBlocking(!!blockData);
-        }
-
-        const { data: allPosts } = await supabase
-
-          .from("posts")
-
-          .select("id, content");
-
-        const postMap: Record<number, string> = {};
-
-        allPosts?.forEach((p) => {
-          postMap[p.id] = p.content?.trim() || "Медиа публикация";
-        });
-
-        const { data: rawReactions } = await supabase
-
-          .from("reactions")
-
-          .select("*");
-
-        if (rawReactions) {
-          const targetReactions = rawReactions.filter((r) => {
-            const rEmail = (r.user_email || r.email || "")
-
-              .toString()
-
-              .toLowerCase()
-
-              .trim();
-
-            const rUserId = (r.user_id || "").toString().trim();
-
-            return (
-              rEmail === targetEmail ||
-              (rUserId && targetId && rUserId === targetId)
-            );
+        if (isMounted && allProfs) {
+          const map: Record<string, ProfileData> = {};
+          allProfs.forEach((p) => {
+            if (p.email) {
+              map[p.email.toLowerCase().trim()] = p;
+              if (p.email.toLowerCase().trim() === viewerEmail)
+                setIsCurrentUserBanned(p.status === "banned");
+            }
           });
-
-          setLikedPosts(
-            targetReactions.map((r) => ({
-              id: r.id,
-
-              post_id: r.post_id,
-
-              created_at: r.created_at || getNowIso(),
-
-              post_content: postMap[r.post_id] || "Публикация #" + r.post_id,
-            })),
-          );
+          setProfiles(map);
         }
-
-        const { data: rawComments } = await supabase
-
-          .from("comments")
-
-          .select("*")
-
-          .order("created_at", { ascending: false });
-
-        if (rawComments) {
-          const targetComments = rawComments.filter((c) => {
-            const cEmail = (c.user_email || c.email || "")
-
-              .toString()
-
-              .toLowerCase()
-
-              .trim();
-
-            const cUserId = (c.user_id || "").toString().trim();
-
-            return (
-              cEmail === targetEmail ||
-              (cUserId && targetId && cUserId === targetId)
-            );
-          });
-
-          setUserComments(
-            targetComments.map((c) => ({
-              id: c.id,
-
-              post_id: c.post_id,
-
-              content: c.content,
-
-              created_at: c.created_at,
-
-              post_content: postMap[c.post_id] || "Публикация #" + c.post_id,
-            })),
-          );
-        }
-
-        if (targetEmail === ADMIN_EMAIL.toLowerCase().trim()) {
-          // 🔴 FIX: Adminning barcha (muddati o'tgan va o'tmagan) istoriyalarini vaqt bo'yicha eng yangisi birinchi keladigan qilib olish
-          const { data: sts } = await supabase
-
-            .from("stories")
-
-            .select("*")
-
-            .ilike("user_email", viewedProfileData.email || "")
-
-            .order("created_at", { ascending: false });
-
-          if (sts) setUserStories(sts);
-
-          const { data: stViews } = await supabase
-
-            .from("story_views")
-
-            .select("*");
-
-          if (stViews) setStoryViews(stViews);
-
-          const { data: stLikes } = await supabase
-
-            .from("story_likes")
-
-            .select("*");
-
-          if (stLikes) setStoryLikes(stLikes);
-        }
+        setLoading(false);
+        return;
       }
 
-      const { data: allProfs } = await supabase
+      if (
+        viewerEmail &&
+        viewedProfileData.email?.toLowerCase().trim() === viewerEmail
+      ) {
+        router.replace("/profile");
+        return;
+      }
 
-        .from("profiles")
+      setProfile(viewedProfileData);
 
-        .select("email, full_name, username, avatar_url, status");
+      const targetEmail = viewedProfileData.email?.toLowerCase().trim() || "";
+      const targetId = viewedProfileData.id;
+      const isProfileAdminTarget = targetEmail === ADMIN_EMAIL.toLowerCase();
+
+      // 48 soatlik profil tashrifi
+      if (
+        viewerEmail &&
+        isProfileAdminTarget &&
+        viewerEmail !== ADMIN_EMAIL.toLowerCase()
+      ) {
+        supabase
+          .from("profile_views")
+          .insert([
+            {
+              profile_email: ADMIN_EMAIL.toLowerCase(),
+              viewer_email: viewerEmail,
+            },
+          ]);
+      }
+
+      const orFilter = targetId
+        ? `user_email.eq.${targetEmail},user_id.eq.${targetId}`
+        : `user_email.eq.${targetEmail}`;
+
+      // 2) Parallel optimallashtirilgan so'rovlar
+      const [
+        { data: muteData },
+        { data: blockData },
+        { data: allPosts },
+        { data: rawReactions },
+        { data: rawComments },
+        { data: allProfs },
+        { data: sts },
+      ] = await Promise.all([
+        viewerEmail && targetEmail
+          ? supabase
+              .from("chat_mutes")
+              .select("*")
+              .eq("user_email", viewerEmail)
+              .eq("target_email", targetEmail)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        viewerEmail && targetEmail
+          ? supabase
+              .from("blocked_users")
+              .select("*")
+              .eq("blocker_email", viewerEmail)
+              .eq("blocked_email", targetEmail)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        supabase.from("posts").select("id, content"),
+        supabase.from("reactions").select("*").or(orFilter),
+        supabase
+          .from("comments")
+          .select("*")
+          .or(orFilter)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("profiles")
+          .select("email, full_name, username, avatar_url, status"),
+        isProfileAdminTarget
+          ? supabase
+              .from("stories")
+              .select("*")
+              .ilike("user_email", viewedProfileData.email || "")
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] as Story[] }),
+      ]);
+
+      if (!isMounted) return;
+
+      setIsMuted(!!muteData);
+      setAmIBlocking(!!blockData);
+
+      const postMap: Record<number, string> = {};
+      allPosts?.forEach((p) => {
+        postMap[p.id] = p.content?.trim() || "Медиа публикация";
+      });
+
+      if (rawReactions) {
+        setLikedPosts(
+          rawReactions.map((r) => ({
+            id: r.id,
+            post_id: r.post_id,
+            created_at: r.created_at || getNowIso(),
+            post_content: postMap[r.post_id] || "Публикация #" + r.post_id,
+          })),
+        );
+      }
+
+      if (rawComments) {
+        setUserComments(
+          rawComments.map((c) => ({
+            id: c.id,
+            post_id: c.post_id,
+            content: c.content,
+            created_at: c.created_at,
+            post_content: postMap[c.post_id] || "Публикация #" + c.post_id,
+          })),
+        );
+      }
 
       if (allProfs) {
         const map: Record<string, ProfileData> = {};
-
         allProfs.forEach((p) => {
           if (p.email) {
             map[p.email.toLowerCase().trim()] = p;
-
             if (p.email.toLowerCase().trim() === viewerEmail)
               setIsCurrentUserBanned(p.status === "banned");
           }
         });
-
         setProfiles(map);
+      }
+
+      if (isProfileAdminTarget) {
+        setUserStories(sts || []);
+        const storyIds = (sts || []).map((s) => s.id);
+        if (storyIds.length > 0) {
+          const [{ data: stViews }, { data: stLikes }] = await Promise.all([
+            supabase.from("story_views").select("*").in("story_id", storyIds),
+            supabase.from("story_likes").select("*").in("story_id", storyIds),
+          ]);
+
+          if (isMounted) {
+            if (stViews) setStoryViews(stViews);
+            if (stLikes) setStoryLikes(stLikes);
+          }
+        } else {
+          setStoryViews([]);
+          setStoryLikes([]);
+        }
       }
 
       setLoading(false);
@@ -461,30 +394,25 @@ export default function UserPublicProfilePage() {
 
   useEffect(() => {
     const targetEmail = profile?.email?.toLowerCase().trim();
-
     const myEmail = session?.user?.email?.toLowerCase().trim();
 
     if (!targetEmail || !myEmail) return;
 
     const handleSyncBlock = (e: Event) => {
       const { target, blocked } = (e as CustomEvent).detail;
-
       if (target === targetEmail) setAmIBlocking(blocked);
     };
 
     const handleSyncMute = (e: Event) => {
       const { target, muted } = (e as CustomEvent).detail;
-
       if (target === targetEmail) setIsMuted(muted);
     };
 
     window.addEventListener("sync-block", handleSyncBlock);
-
     window.addEventListener("sync-mute", handleSyncMute);
 
     return () => {
       window.removeEventListener("sync-block", handleSyncBlock);
-
       window.removeEventListener("sync-mute", handleSyncMute);
     };
   }, [profile, session]);
@@ -506,13 +434,9 @@ export default function UserPublicProfilePage() {
       return;
 
     const currentStory = userStories[viewingStoryIndex];
-
     const isVideo = currentStory.media_type === "video";
-
     const totalDurationMs = isVideo ? videoDuration * 1000 : 5000;
-
     const interval = 50;
-
     const step = 100 / (totalDurationMs / interval);
 
     const timer = setInterval(() => {
@@ -520,17 +444,13 @@ export default function UserPublicProfilePage() {
         if (prev >= 100) {
           if (viewingStoryIndex < userStories.length - 1) {
             setIsMediaLoaded(false);
-
             setViewingStoryIndex((i) => (i !== null ? i + 1 : null));
-
             return 0;
           } else {
             setViewingStoryIndex(null);
-
             return 0;
           }
         }
-
         return prev + step;
       });
     }, interval);
@@ -538,13 +458,9 @@ export default function UserPublicProfilePage() {
     return () => clearInterval(timer);
   }, [
     viewingStoryIndex,
-
     isStoryPaused,
-
     userStories,
-
     videoDuration,
-
     isMediaLoaded,
   ]);
 
@@ -557,7 +473,6 @@ export default function UserPublicProfilePage() {
       return;
 
     const currentStory = userStories[viewingStoryIndex];
-
     const viewerLocalEmail = session.user.email.toLowerCase().trim();
 
     if (currentStory.user_email.toLowerCase().trim() === viewerLocalEmail)
@@ -585,22 +500,16 @@ export default function UserPublicProfilePage() {
                 v.viewer_email === viewerLocalEmail
               ),
           ),
-
           {
             id: getTempId(),
-
             story_id: currentStory.id,
-
             viewer_email: viewerLocalEmail,
-
             viewed_at: getNowIso(),
           },
         ]);
 
         await supabase
-
           .from("story_views")
-
           .insert([
             { story_id: currentStory.id, viewer_email: viewerLocalEmail },
           ]);
@@ -608,17 +517,14 @@ export default function UserPublicProfilePage() {
     };
 
     recordView();
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewingStoryIndex, userStories, session, storyViews]);
 
   const handleStoryLike = async (storyId: number) => {
     if (!session?.user?.email) return router.push("/login");
-
     if (isCurrentUserBanned) return alert("Ваш аккаунт заблокирован.");
 
     const emailLocal = session.user.email.toLowerCase().trim();
-
     const existing = storyLikes.find(
       (l) =>
         String(l.story_id) === String(storyId) && l.user_email === emailLocal,
@@ -626,29 +532,20 @@ export default function UserPublicProfilePage() {
 
     if (existing) {
       setStoryLikes((prev) => prev.filter((l) => l.id !== existing.id));
-
       await supabase.from("story_likes").delete().eq("id", existing.id);
     } else {
       const tempId = getTempId();
-
       setStoryLikes((prev) => [
         ...prev,
-
         {
           id: tempId,
-
           story_id: storyId,
-
           user_email: emailLocal,
-
           created_at: getNowIso(),
         },
       ]);
-
       await supabase
-
         .from("story_likes")
-
         .insert([{ story_id: storyId, user_email: emailLocal }]);
     }
   };
@@ -657,9 +554,7 @@ export default function UserPublicProfilePage() {
     if (!session?.user?.email || !profile?.email) return;
 
     const myEmail = session.user.email.toLowerCase().trim();
-
     const targetEmail = profile.email.toLowerCase().trim();
-
     const newMutedState = !isMuted;
 
     setIsMuted(newMutedState);
@@ -672,9 +567,7 @@ export default function UserPublicProfilePage() {
 
     if (newMutedState) {
       await supabase
-
         .from("chat_mutes")
-
         .insert([{ user_email: myEmail, target_email: targetEmail }]);
 
       await recordActivity(
@@ -684,11 +577,8 @@ export default function UserPublicProfilePage() {
       );
     } else {
       await supabase
-
         .from("chat_mutes")
-
         .delete()
-
         .match({ user_email: myEmail, target_email: targetEmail });
 
       await recordActivity(
@@ -703,13 +593,11 @@ export default function UserPublicProfilePage() {
     if (!session?.user?.email || !profile?.email) return;
 
     const myEmail = session.user.email.toLowerCase().trim();
-
     const targetEmail = profile.email.toLowerCase().trim();
 
     if (targetEmail === ADMIN_EMAIL.toLowerCase()) return;
 
     const newBlockState = !amIBlocking;
-
     setAmIBlocking(newBlockState);
 
     window.dispatchEvent(
@@ -720,9 +608,7 @@ export default function UserPublicProfilePage() {
 
     if (newBlockState) {
       await supabase
-
         .from("blocked_users")
-
         .insert([{ blocker_email: myEmail, blocked_email: targetEmail }]);
 
       await recordActivity(
@@ -732,11 +618,8 @@ export default function UserPublicProfilePage() {
       );
     } else {
       await supabase
-
         .from("blocked_users")
-
         .delete()
-
         .match({ blocker_email: myEmail, blocked_email: targetEmail });
 
       await recordActivity(
@@ -762,7 +645,6 @@ export default function UserPublicProfilePage() {
           <p className="text-gray-500 font-medium mb-4">
             Пользователь не найден
           </p>
-
           <Link
             href="/"
             className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition"
@@ -775,9 +657,7 @@ export default function UserPublicProfilePage() {
   }
 
   const viewerEmail = session?.user?.email?.toLowerCase().trim() || "";
-
   const userStatus = profile.status || "active";
-
   const cleanUsername = profile.username
     ? profile.username.replace(/^@+/, "")
     : "";
@@ -851,7 +731,6 @@ export default function UserPublicProfilePage() {
             <button
               onClick={() => {
                 setViewingStoryIndex(0);
-
                 setStoryProgress(0);
               }}
               className="text-[10px] text-blue-500 font-bold mt-1.5 hover:underline flex items-center gap-1 cursor-pointer"
@@ -871,7 +750,6 @@ export default function UserPublicProfilePage() {
               <div className="flex items-center justify-center gap-1 text-gray-400 text-[11px] mb-0.5">
                 <Heart className="w-3 h-3 text-red-500" /> Лайки
               </div>
-
               <p className="font-bold text-sm text-gray-900 dark:text-gray-100">
                 {likedPosts.length}
               </p>
@@ -883,7 +761,6 @@ export default function UserPublicProfilePage() {
               <div className="flex items-center justify-center gap-1 text-gray-400 text-[11px] mb-0.5">
                 <MessageSquare className="w-3 h-3 text-blue-500" /> Комменты
               </div>
-
               <p className="font-bold text-sm text-gray-900 dark:text-gray-100">
                 {userComments.length}
               </p>
@@ -896,10 +773,8 @@ export default function UserPublicProfilePage() {
             <span className="block font-semibold text-gray-500 mb-1 ml-1">
               Имя пользователя
             </span>
-
             <div className="w-full bg-gray-50 dark:bg-[#161616] border border-gray-200 dark:border-gray-800 rounded-xl px-3.5 py-2.5 flex items-center gap-2 text-black dark:text-white">
               <AtSign className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-
               <span className="font-medium">
                 {cleanUsername || "Не указано"}
               </span>
@@ -910,7 +785,6 @@ export default function UserPublicProfilePage() {
             <span className="block font-semibold text-gray-500 mb-1 ml-1">
               О себе
             </span>
-
             <div className="w-full bg-gray-50 dark:bg-[#161616] border border-gray-200 dark:border-gray-800 rounded-xl px-3.5 py-2.5 min-h-[50px] whitespace-pre-wrap text-black dark:text-white leading-relaxed">
               {profile.bio || "Нет описания..."}
             </div>
@@ -921,10 +795,8 @@ export default function UserPublicProfilePage() {
               <span className="block font-semibold text-blue-500 mb-1 ml-1">
                 Номер телефона (Скрыто)
               </span>
-
               <div className="w-full bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-xl px-3.5 py-2.5 flex items-center gap-2 text-blue-700 dark:text-blue-400 font-mono font-bold">
                 <Phone className="w-3.5 h-3.5 shrink-0" />
-
                 <span>{profile.phone}</span>
               </div>
             </div>
@@ -935,16 +807,12 @@ export default function UserPublicProfilePage() {
               <span className="block font-semibold text-emerald-500 mb-1 ml-1">
                 Дата рождения (Скрыто)
               </span>
-
               <div className="w-full bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl px-3.5 py-2.5 flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold">
                 <CalendarDays className="w-3.5 h-3.5 shrink-0" />
-
                 <span>
                   {new Date(profile.birth_date).toLocaleDateString("ru-RU", {
                     day: "numeric",
-
                     month: "long",
-
                     year: "numeric",
                   })}
                 </span>
@@ -960,9 +828,7 @@ export default function UserPublicProfilePage() {
               <button
                 onClick={(e) => {
                   e.preventDefault();
-
                   setSpyTargetEmail(undefined);
-
                   window.dispatchEvent(
                     new CustomEvent("open-chat", { detail: profile.email }),
                   );
@@ -977,16 +843,13 @@ export default function UserPublicProfilePage() {
                 <button
                   onClick={async (e) => {
                     e.preventDefault();
-
                     const target = profile.email?.toLowerCase().trim();
                     setSpyTargetEmail(target);
-
                     await recordActivity(
                       viewerEmail,
                       "Просмотр чатов (Spy)",
                       `Администратор вошел в режим просмотра сообщений пользователя ${target}`,
                     );
-
                     window.dispatchEvent(
                       new CustomEvent("open-chat", { detail: profile.email }),
                     );
@@ -1007,7 +870,6 @@ export default function UserPublicProfilePage() {
                   ) : (
                     <Bell className="w-3.5 h-3.5" />
                   )}
-
                   {isMuted ? "Включить звук" : "Без звука"}
                 </button>
 
@@ -1017,7 +879,6 @@ export default function UserPublicProfilePage() {
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-bold transition active:scale-95 border cursor-pointer ${amIBlocking ? "bg-red-500 text-white border-red-600 hover:bg-red-600" : "bg-red-50 dark:bg-red-950/20 text-red-500 border-red-100 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-950/40"}`}
                   >
                     <Ban className="w-3.5 h-3.5" />
-
                     {amIBlocking ? "Разблокировать" : "Заблокировать"}
                   </button>
                 )}
@@ -1052,9 +913,7 @@ export default function UserPublicProfilePage() {
             <div className="absolute top-3 inset-x-3 z-30 flex items-center gap-1.5">
               {userStories.map((s, idx) => {
                 const isPassed = idx < viewingStoryIndex;
-
                 const isCurrent = idx === viewingStoryIndex;
-
                 return (
                   <div
                     key={`${s.id}_${idx}`}
@@ -1082,26 +941,22 @@ export default function UserPublicProfilePage() {
                   alt=""
                   className="w-8 h-8 rounded-full object-cover border border-white/40"
                 />
-
                 <div className="leading-tight text-left">
                   <p className="text-xs font-bold truncate max-w-[140px]">
                     {profile.full_name ||
                       (cleanUsername ? `@${cleanUsername}` : "Пользователь")}
                   </p>
-
                   <p className="text-[10px] text-white/70">
                     {new Date(
                       userStories[viewingStoryIndex].created_at,
                     ).toLocaleTimeString([], {
                       hour: "2-digit",
-
                       minute: "2-digit",
                     })}
                   </p>
                 </div>
               </div>
 
-              {/* 🔴 FIX: O'chirish (Trash2) tugmasi FAQAT ADMIN ga ko'rsatiladi */}
               <div className="flex items-center gap-2">
                 {isAdminViewer && (
                   <button
@@ -1130,7 +985,6 @@ export default function UserPublicProfilePage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-
                     setViewingStoryIndex(null);
                   }}
                   className="p-1.5 rounded-full bg-black/50 backdrop-blur-md hover:bg-white/20 transition text-white cursor-pointer"
@@ -1157,20 +1011,16 @@ export default function UserPublicProfilePage() {
                   onLoadedData={() => setIsMediaLoaded(true)}
                   onLoadedMetadata={(e) => {
                     setVideoDuration(e.currentTarget.duration || 5);
-
                     setIsMediaLoaded(true);
                   }}
                   className={`w-full h-full object-contain transition-opacity duration-300 ${isMediaLoaded ? "opacity-100" : "opacity-0"}`}
                   onEnded={() => {
                     if (viewingStoryIndex < userStories.length - 1) {
                       setIsMediaLoaded(false);
-
                       setViewingStoryIndex((i) => (i !== null ? i + 1 : null));
-
                       setStoryProgress(0);
                     } else {
                       setViewingStoryIndex(null);
-
                       setStoryProgress(0);
                     }
                   }}
@@ -1188,31 +1038,23 @@ export default function UserPublicProfilePage() {
                 className="absolute inset-y-0 left-0 w-1/3 z-20 cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
-
                   if (viewingStoryIndex > 0) {
                     setIsMediaLoaded(false);
-
                     setViewingStoryIndex((i) => (i !== null ? i - 1 : null));
-
                     setStoryProgress(0);
                   }
                 }}
               />
-
               <div
                 className="absolute inset-y-0 right-0 w-1/3 z-20 cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
-
                   if (viewingStoryIndex < userStories.length - 1) {
                     setIsMediaLoaded(false);
-
                     setViewingStoryIndex((i) => (i !== null ? i + 1 : null));
-
                     setStoryProgress(0);
                   } else {
                     setViewingStoryIndex(null);
-
                     setStoryProgress(0);
                   }
                 }}
@@ -1232,7 +1074,6 @@ export default function UserPublicProfilePage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-
                         handleStoryLike(userStories[viewingStoryIndex].id);
                       }}
                       className={`p-2.5 rounded-full backdrop-blur-md transition active:scale-75 flex items-center justify-center shadow-lg border border-white/10 cursor-pointer ${storyLikes.some((l) => String(l.story_id) === String(userStories[viewingStoryIndex].id) && l.user_email === viewerEmail) ? "bg-red-600 text-white shadow-red-500/50" : "bg-black/60 hover:bg-black/80 text-white"}`}
@@ -1259,7 +1100,6 @@ export default function UserPublicProfilePage() {
               alt="Zoomed Avatar"
               className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-gray-800"
             />
-
             <button
               onClick={() => setIsZoomed(false)}
               className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition cursor-pointer"
@@ -1284,7 +1124,6 @@ export default function UserPublicProfilePage() {
                 {activeModal === "likes" ? (
                   <>
                     <Heart className="w-4 h-4 text-red-500" />
-
                     <span className="font-bold text-xs">
                       Понравившиеся публикации
                     </span>
@@ -1292,12 +1131,10 @@ export default function UserPublicProfilePage() {
                 ) : (
                   <>
                     <MessageSquare className="w-4 h-4 text-blue-500" />
-
                     <span className="font-bold text-xs">Комментарии</span>
                   </>
                 )}
               </div>
-
               <button
                 onClick={() => setActiveModal(null)}
                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
@@ -1324,12 +1161,10 @@ export default function UserPublicProfilePage() {
                         <p className="text-xs text-gray-800 dark:text-gray-200 truncate font-medium">
                           {item.post_content}
                         </p>
-
                         <span className="text-[10px] text-gray-400 font-mono">
                           ID: #{item.post_id}
                         </span>
                       </div>
-
                       <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500 shrink-0" />
                     </Link>
                   ))
@@ -1350,20 +1185,17 @@ export default function UserPublicProfilePage() {
                       <p className="text-xs text-gray-900 dark:text-gray-100 font-semibold truncate">
                         &quot;{item.content}&quot;
                       </p>
-
                       <p className="text-[11px] text-gray-400 truncate mt-0.5">
                         К посту: {item.post_content}
                       </p>
-
                       <span className="text-[10px] text-gray-400 font-mono mt-0.5 block">
-                        {new Date(item.created_at).toLocaleString([], {
+                        {new Date(item.created_at).toLocaleDateString()}{" "}
+                        {new Date(item.created_at).toLocaleTimeString([], {
                           dateStyle: "short",
-
                           timeStyle: "short",
                         })}
                       </span>
                     </div>
-
                     <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500 shrink-0" />
                   </Link>
                 ))
@@ -1375,7 +1207,7 @@ export default function UserPublicProfilePage() {
 
       <ChatHub
         session={session}
-        isBanned={status === "banned"}
+        isBanned={userStatus === "banned"}
         profiles={profiles}
         spyUserEmail={spyTargetEmail}
       />
