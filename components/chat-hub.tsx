@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   MessageCircle,
   Send,
@@ -50,76 +50,245 @@ interface ChatHubProps {
 }
 
 const EMOJIS = [
+  // 🟢 Yuz ifodalari (Quvonch va kulgi)
   "😀",
+  "😃",
+  "😄",
+  "😁",
+  "😆",
+  "😅",
   "😂",
   "🤣",
+  "🥲",
+  "🥹",
   "😊",
+  "😇",
+  "🙂",
+  "🙃",
+  "😉",
+  "😌",
   "😍",
   "🥰",
   "😘",
+  "😗",
+  "😙",
+  "😚",
+  "😋",
+  "😛",
+  "😝",
   "😜",
+  "🤪",
+  "🤨",
+  "🧐",
+  "🤓",
   "😎",
+  "🥸",
   "🤩",
+  "🥳",
   "😏",
   "😒",
+
+  // 🟡 Yuz ifodalari (Hissiyotlar va xafalik)
+  "😞",
   "😔",
+  "😟",
   "😕",
-  "🙄",
-  "😬",
-  "🤥",
-  "😌",
-  "😪",
-  "🤤",
-  "😴",
-  "😷",
-  "🤒",
-  "🤕",
-  "🤢",
-  "🤮",
-  "🤧",
+  "🙁",
+  "☹️",
+  "😣",
+  "😖",
+  "😫",
+  "😩",
+  "🥺",
+  "😢",
+  "😭",
+  "😤",
+  "😠",
+  "😡",
+  "🤬",
+  "🤯",
+  "😳",
   "🥵",
   "🥶",
-  "🥴",
-  "😵",
-  "🤯",
-  "🤠",
-  "🥳",
-  "🤓",
-  "🧐",
-  "☹️",
-  "😮",
-  "😲",
-  "😳",
-  "🥺",
-  "😦",
+  "😱",
   "😨",
   "😰",
   "😥",
-  "😢",
-  "😭",
-  "😱",
-  "😖",
-  "😣",
-  "😞",
   "😓",
-  "😩",
-  "😫",
+  "🫣",
+  "🤗",
+  "🤔",
+  "🫡",
+  "🤫",
+  "🫠",
+  "🤥",
+  "😶",
+  "😐",
+  "😑",
+  "😬",
+  "🙄",
+  "😯",
+  "😦",
+  "😧",
+  "😮",
+  "😲",
   "🥱",
-  "😤",
-  "😡",
-  "😠",
-  "🤬",
-  "😈",
-  "💯",
-  "💢",
-  "💥",
+  "😴",
+  "🤤",
+  "😪",
+  "😮‍💨",
+  "😵",
+  "😵‍💫",
+  "🤐",
+  "🥴",
+  "🤢",
+  "🤮",
+  "🤧",
+  "😷",
+  "🤒",
+  "🤕",
+  "🤑",
+
+  // 👋 Qo'l ishoralari
+  "👋",
+  "🤚",
+  "🖐",
+  "✋",
+  "🖖",
+  "👌",
+  "🤌",
+  "🤏",
+  "✌️",
+  "🤞",
+  "🫰",
+  "🤟",
+  "🤘",
+  "🤙",
+  "👈",
+  "👉",
+  "👆",
+  "🖕",
+  "👇",
+  "☝️",
+  "👍",
+  "👎",
+  "✊",
+  "👊",
+  "🤛",
+  "🤜",
+  "👏",
+  "🙌",
+  "👐",
+  "🤲",
+  "🤝",
+  "🙏",
+  "✍️",
+  "💅",
+  "🤳",
+  "💪",
+  "🦾",
+
+  // ❤️ Yuraklar
+  "❤️",
+  "🧡",
+  "💛",
+  "💚",
+  "💙",
+  "💜",
+  "🖤",
+  "🤍",
+  "🤎",
+  "💔",
+  "❤️‍🔥",
+  "❤️‍🩹",
+  "❣️",
+  "💕",
+  "💞",
+  "💓",
+  "💗",
+  "💖",
+  "💘",
+  "💝",
+
+  // ✨ Belgilar va Tabiat
+  "✨",
+  "⭐️",
+  "🌟",
   "💫",
-  "💦",
+  "💥",
+  "🔥",
   "💨",
-  "💣",
+  "💦",
+  "💧",
+  "💤",
   "💬",
   "👁️‍🗨️",
-  "👍",
+  "🗯",
+  "💭",
+  "💯",
+  "💢",
+  "🛑",
+  "⚠️",
+  "✅",
+  "❌",
+  "🌍",
+  "🌙",
+  "☀️",
+  "☁️",
+  "⚡️",
+  "❄️",
+  "🔥",
+  "🎉",
+  "🎁",
+  "🎈",
+
+  // 🐱 Hayvonlar va O'simliklar
+  "🐶",
+  "🐱",
+  "🐭",
+  "🐰",
+  "🦊",
+  "🐻",
+  "🐼",
+  "🐯",
+  "🦁",
+  "🐮",
+  "🐷",
+  "🐸",
+  "🐒",
+  "🐔",
+  "🐧",
+  "🐦",
+  "🦋",
+  "🌹",
+  "🥀",
+  "🌺",
+  "🌻",
+  "🌼",
+  "🍀",
+  "🪴",
+
+  // 🍕 Ovqat va Ichimliklar
+  "🍎",
+  "🍓",
+  "🍒",
+  "🍉",
+  "🍌",
+  "🍇",
+  "🍕",
+  "🍔",
+  "🍟",
+  "🌭",
+  "🍿",
+  "🍩",
+  "🍪",
+  "🍫",
+  "🍬",
+  "☕",
+  "🧋",
+  "🍹",
+  "🥂",
+  "🎂",
 ];
 
 const ADMIN_EMAIL = "urokov.me@gmail.com";
@@ -131,6 +300,7 @@ export function ChatHub({
   spyUserEmail,
 }: ChatHubProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isHomePage = pathname === "/";
 
   const [isOpen, setIsOpen] = useState(false);
@@ -176,6 +346,54 @@ export function ChatHub({
   const blockedUsersRef = useRef(blockedUsers);
   const mutedChatsRef = useRef(mutedChats);
 
+  // 🔴 BROWSER TARIXI UCHUN REFLAR
+  const isOpenRef = useRef(isOpen);
+  const activeChatRef = useRef(activeChat);
+  const pathnameRef = useRef(pathname);
+  const routerRef = useRef(router);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+    activeChatRef.current = activeChat;
+    pathnameRef.current = pathname;
+    routerRef.current = router;
+  }, [isOpen, activeChat, pathname, router]);
+
+  // 🔴 POPSTATE (TELEFON "ORQAGA" TUGMASINI) ESHITISH VA ASOSIY SAHIFAGA OTISH
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const state = e.state as { chatStep?: string; email?: string } | null;
+      if (state?.chatStep === "chat") {
+        setIsOpen(true);
+        setActiveChat(state.email || null);
+      } else if (state?.chatStep === "list") {
+        setIsOpen(true);
+        setActiveChat(null);
+      } else {
+        setIsOpen(false);
+        setActiveChat(null);
+        // Agar profil sahifasidan kelgan bo'lsangiz va oynani yopsangiz, asosiyga otadi
+        if (pathnameRef.current !== "/") {
+          routerRef.current.push("/");
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // 🔴 MODALNI YOPISH
+  const handleCloseModal = () => {
+    if (isOpenRef.current) {
+      const steps = activeChatRef.current ? -2 : -1;
+      window.history.go(steps);
+    } else {
+      setIsOpen(false);
+      setActiveChat(null);
+    }
+  };
+
   const myEmail = session?.user?.email?.toLowerCase().trim() || "";
   const isAdmin = myEmail === ADMIN_EMAIL;
   const currentSpyEmail = spyUserEmail?.toLowerCase().trim() || "";
@@ -183,6 +401,25 @@ export function ChatHub({
   useEffect(() => {
     if (currentSpyEmail && isAdmin) {
       setTimeout(() => {
+        if (!isOpenRef.current) {
+          window.history.pushState({ chatStep: "list" }, "");
+          window.history.pushState(
+            { chatStep: "chat", email: currentSpyEmail },
+            "",
+          );
+        } else {
+          if (activeChatRef.current) {
+            window.history.replaceState(
+              { chatStep: "chat", email: currentSpyEmail },
+              "",
+            );
+          } else {
+            window.history.pushState(
+              { chatStep: "chat", email: currentSpyEmail },
+              "",
+            );
+          }
+        }
         setIsOpen(true);
         setActiveChat(currentSpyEmail);
       }, 100);
@@ -280,12 +517,34 @@ export function ChatHub({
   useEffect(() => {
     const handleOpenChatEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (customEvent.detail)
+      if (customEvent.detail) {
+        const targetEmail = customEvent.detail.toLowerCase().trim();
         setTimeout(() => {
+          if (!isOpenRef.current) {
+            window.history.pushState({ chatStep: "list" }, "");
+            window.history.pushState(
+              { chatStep: "chat", email: targetEmail },
+              "",
+            );
+          } else {
+            if (activeChatRef.current) {
+              window.history.replaceState(
+                { chatStep: "chat", email: targetEmail },
+                "",
+              );
+            } else {
+              window.history.pushState(
+                { chatStep: "chat", email: targetEmail },
+                "",
+              );
+            }
+          }
           setIsOpen(true);
-          setActiveChat(customEvent.detail.toLowerCase().trim());
+          setActiveChat(targetEmail);
         }, 0);
+      }
     };
+
     const handleSyncBlock = (e: Event) => {
       const { target, blocked } = (e as CustomEvent).detail;
       setBlockedUsers((prev) =>
@@ -301,6 +560,7 @@ export function ChatHub({
             ),
       );
     };
+
     const handleSyncMute = (e: Event) => {
       const { target, muted } = (e as CustomEvent).detail;
       setMutedChats((prev) =>
@@ -325,11 +585,18 @@ export function ChatHub({
     const params = new URLSearchParams(window.location.search);
     const chatTarget = params.get("chat");
     if (chatTarget) {
+      const targetEmail = chatTarget.toLowerCase().trim();
       setTimeout(() => {
+        window.history.replaceState(
+          null,
+          document.title,
+          window.location.pathname,
+        );
+        window.history.pushState({ chatStep: "list" }, "");
+        window.history.pushState({ chatStep: "chat", email: targetEmail }, "");
         setIsOpen(true);
-        setActiveChat(chatTarget.toLowerCase().trim());
+        setActiveChat(targetEmail);
       }, 0);
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [myEmail]);
 
@@ -341,8 +608,9 @@ export function ChatHub({
       )
         return;
       if (contextMenu) setContextMenu(null);
-      if (modalRef.current && !modalRef.current.contains(e.target as Node))
-        setIsOpen(false);
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        handleCloseModal();
+      }
     };
     if (isOpen || contextMenu)
       document.addEventListener("mousedown", handleClickOutside);
@@ -428,9 +696,11 @@ export function ChatHub({
                 return [...prev, newMsg];
               });
 
-              // 🔴 TAYYORLANGAN QISM: Xabar sizga kelgan bo'lsa ovoz chiqarish (Adminni endi bloklamaydi)
               if (newMsg.receiver_email === myEmail) {
-                if (!isOpen || activeChat !== newMsg.sender_email) {
+                if (
+                  !isOpenRef.current ||
+                  activeChatRef.current !== newMsg.sender_email
+                ) {
                   setUnreadCount((prev) => prev + 1);
                   playMessageSound(newMsg.sender_email);
                 } else {
@@ -463,7 +733,7 @@ export function ChatHub({
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myEmail, isOpen, activeChat, currentSpyEmail, isAdmin]);
+  }, [myEmail, currentSpyEmail, isAdmin]);
 
   useEffect(() => {
     if (isOpen && activeChat) {
@@ -609,6 +879,11 @@ export function ChatHub({
 
   const handleChatClick = (email: string) => {
     if (isLongPress.current) return;
+    if (activeChatRef.current) {
+      window.history.replaceState({ chatStep: "chat", email }, "");
+    } else {
+      window.history.pushState({ chatStep: "chat", email }, "");
+    }
     setActiveChat(email);
   };
 
@@ -749,7 +1024,6 @@ export function ChatHub({
           50,
         );
 
-        // 🔴 BILDIRISHNOMA YUBORISH QISMI
         const myProfile = liveProfiles[myEmail];
         const myName = myProfile?.username
           ? `@${myProfile.username}`
@@ -881,7 +1155,7 @@ export function ChatHub({
                 )}
               </h2>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleCloseModal}
                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition sm:hidden"
               >
                 <X className="w-5 h-5" />
@@ -1045,7 +1319,7 @@ export function ChatHub({
               <div className="flex flex-col h-full bg-[#f4f4f5] dark:bg-black/90">
                 <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-[#111] border-b border-gray-100 dark:border-gray-800 shrink-0 z-10 shadow-sm">
                   <button
-                    onClick={() => setActiveChat(null)}
+                    onClick={() => window.history.back()}
                     className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition sm:hidden"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -1107,7 +1381,7 @@ export function ChatHub({
                     )}
 
                     <button
-                      onClick={() => setIsOpen(false)}
+                      onClick={handleCloseModal}
                       className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition hidden sm:block"
                     >
                       <X className="w-5 h-5" />
@@ -1337,7 +1611,7 @@ export function ChatHub({
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-400 space-y-3 relative">
                 <button
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleCloseModal}
                   className="absolute top-4 right-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-full transition"
                 >
                   <X className="w-6 h-6" />
@@ -1355,7 +1629,12 @@ export function ChatHub({
       {/* 🔴 Floating Chat Ikonkasi */}
       {isHomePage && (
         <div
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            if (!isOpenRef.current) {
+              window.history.pushState({ chatStep: "list" }, "");
+              setIsOpen(true);
+            }
+          }}
           className={`p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded-full shadow-2xl cursor-pointer hover:scale-110 transition-all pointer-events-auto relative active:scale-95 ${isOpen ? "opacity-0 scale-0" : "opacity-100 scale-100"}`}
         >
           <div className="bg-blue-600 hover:bg-blue-500 p-3.5 sm:p-4 rounded-full text-white shadow-inner transition-colors">

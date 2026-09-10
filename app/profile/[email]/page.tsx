@@ -259,14 +259,12 @@ export default function UserPublicProfilePage() {
         isProfileAdminTarget &&
         viewerEmail !== ADMIN_EMAIL.toLowerCase()
       ) {
-        supabase
-          .from("profile_views")
-          .insert([
-            {
-              profile_email: ADMIN_EMAIL.toLowerCase(),
-              viewer_email: viewerEmail,
-            },
-          ]);
+        supabase.from("profile_views").insert([
+          {
+            profile_email: ADMIN_EMAIL.toLowerCase(),
+            viewer_email: viewerEmail,
+          },
+        ]);
       }
 
       const orFilter = targetId
@@ -522,9 +520,11 @@ export default function UserPublicProfilePage() {
 
   const handleStoryLike = async (storyId: number) => {
     if (!session?.user?.email) return router.push("/login");
+
     if (isCurrentUserBanned) return alert("Ваш аккаунт заблокирован.");
 
     const emailLocal = session.user.email.toLowerCase().trim();
+
     const existing = storyLikes.find(
       (l) =>
         String(l.story_id) === String(storyId) && l.user_email === emailLocal,
@@ -1089,20 +1089,22 @@ export default function UserPublicProfilePage() {
         </div>
       )}
 
+      {/* 🔴 AVATAR ZOOM QISMI (TO'G'RILANDI) */}
       {isZoomed && profile.avatar_url && (
         <div
           onClick={() => setIsZoomed(false)}
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-zoom-out"
         >
-          <div className="relative max-w-lg w-full flex items-center justify-center">
+          <div className="relative max-w-sm w-full flex items-center justify-center">
+            {/* Aspect square va object cover xususiyatlari qo'shildi */}
             <img
               src={profile.avatar_url}
               alt="Zoomed Avatar"
-              className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-gray-800"
+              className="w-full aspect-square rounded-[2rem] object-cover shadow-2xl border-4 border-gray-800"
             />
             <button
               onClick={() => setIsZoomed(false)}
-              className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition cursor-pointer"
+              className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition cursor-pointer z-10"
             >
               <X className="w-5 h-5" />
             </button>

@@ -144,7 +144,7 @@ export default function ProfilePage() {
   const currentEmail = session?.user?.email?.toLowerCase().trim() || "";
   const isAdmin = currentEmail === ADMIN_EMAIL.toLowerCase().trim();
 
-  // Oxirgi 48 soat ichida admin profilini ko'rganlarni yuklash (Xatolikni aniq chiqarish uchun moslashtirildi)
+  // Oxirgi 48 soat ichida admin profilini ko'rganlarni yuklash
   const fetchAdminProfileViews = async () => {
     if (!isAdmin) return;
     const fortyEightHoursAgo = new Date(
@@ -159,11 +159,9 @@ export default function ProfilePage() {
       .order("viewed_at", { ascending: false });
 
     if (error) {
-      // 🔴 Supabase xatosining barcha xususiyatlarini aniq ko'rsatamiz
       console.error("Supabase Profile Views Error Code:", error.code);
       console.error("Supabase Profile Views Error Message:", error.message);
       console.error("Supabase Profile Views Error Hint:", error.hint);
-
       alert(
         `Xatolik: ${error.message} \nMaslahat (Hint): ${error.hint || "Yo'q"}`,
       );
@@ -192,7 +190,7 @@ export default function ProfilePage() {
       const userId = curSession.user.id;
       const isAdminUser = userEmail === ADMIN_EMAIL.toLowerCase().trim();
 
-      // 1) O'z profil qatorini olish (kerak bo'lsa yaratish)
+      // 1) O'z profil qatorini olish
       let { data: profile } = await supabase
         .from("profiles")
         .select("*")
@@ -233,8 +231,6 @@ export default function ProfilePage() {
         setAvatarUrl(curSession.user.user_metadata?.avatar_url || "");
       }
 
-      // ⚡ 2) Qolgan HAMMA so'rovni PARALLEL qilamiz,
-      //     va reactions/comments'ni ENDI SERVERDA filtrlaymiz (butun jadval emas!)
       const orFilter = `user_email.eq.${userEmail},user_id.eq.${userId}`;
       const [
         { data: allProfs },
@@ -276,7 +272,6 @@ export default function ProfilePage() {
         setMyStories(sts || []);
         const storyIds = (sts || []).map((s) => s.id);
         if (storyIds.length > 0) {
-          // ⚡ Endi faqat O'Z storylaringizga tegishli view'larni olamiz
           const { data: stViews } = await supabase
             .from("story_views")
             .select("*")
@@ -861,7 +856,7 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* 🔴 FAQAT ADMIN UCHUN: PROFILGA TASHRIF BUYURGANLARNI KO'RISH TUGMASI (To'g'rilandi) */}
+        {/* 🔴 FAQAT ADMIN UCHUN: PROFILGA TASHRIF BUYURGANLARNI KO'RISH TUGMASI */}
         {isAdmin && (
           <button
             type="button"
@@ -1014,7 +1009,7 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      {/* 🔴 OXIRGI 48 SOATDA PROFILNI KO'RGANLAR MODALI (FAQAT ADMIN) */}
+      {/* 🔴 OXIRGI 48 SOATDA PROFILNI KO'RGANLAR MODALI */}
       {isAdmin && showProfileViewsModal && (
         <div
           onClick={() => setShowProfileViewsModal(false)}
@@ -1400,20 +1395,22 @@ export default function ProfilePage() {
           </div>
         )}
 
+      {/* 🔴 AVATAR ZOOM QISMI (TO'G'RILANDI) */}
       {isZoomed && avatarUrl && (
         <div
           onClick={() => setIsZoomed(false)}
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-zoom-out"
         >
-          <div className="relative max-w-lg w-full flex items-center justify-center">
+          <div className="relative max-w-sm w-full flex items-center justify-center">
+            {/* Aspect square va object cover xususiyatlari qo'shildi */}
             <img
               src={avatarUrl}
               alt="Zoomed Avatar"
-              className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl border border-gray-800"
+              className="w-full aspect-square rounded-[2rem] object-cover shadow-2xl border-4 border-gray-800"
             />
             <button
               onClick={() => setIsZoomed(false)}
-              className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition cursor-pointer"
+              className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition cursor-pointer z-10"
             >
               <X className="w-5 h-5" />
             </button>
