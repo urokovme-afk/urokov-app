@@ -192,7 +192,7 @@ export default function UserPublicProfilePage() {
     let isMounted = true;
 
     async function loadProfile() {
-      // 🔴 Keshni yangilash uchun router.refresh qo'shildi
+      // ⚡ Brauzer va Next.js keshini majburiy tozalash uchun
       router.refresh();
 
       const {
