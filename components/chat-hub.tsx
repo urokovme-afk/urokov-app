@@ -1023,26 +1023,6 @@ export function ChatHub({
           () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }),
           50,
         );
-
-        const myProfile = liveProfiles[myEmail];
-        const myName = myProfile?.username
-          ? `@${myProfile.username}`
-          : myProfile?.full_name || myEmail.split("@")[0];
-
-        await supabase.from("notifications").insert([
-          {
-            user_email: activeChat,
-            actor_name: myName,
-            actor_avatar: myProfile?.avatar_url || "",
-            type: "message",
-            title: "Новое сообщение",
-            message:
-              textToSend.length > 30
-                ? textToSend.substring(0, 30) + "..."
-                : textToSend,
-            is_read: false,
-          },
-        ]);
       }
     } catch (error: unknown) {
       console.log(error);
