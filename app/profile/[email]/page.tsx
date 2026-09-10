@@ -192,6 +192,9 @@ export default function UserPublicProfilePage() {
     let isMounted = true;
 
     async function loadProfile() {
+      // 🔴 Keshni yangilash uchun router.refresh qo'shildi
+      router.refresh();
+
       const {
         data: { session: curSession },
       } = await supabase.auth.getSession();
@@ -252,7 +255,7 @@ export default function UserPublicProfilePage() {
       const targetEmail = viewedProfileData.email?.toLowerCase().trim() || "";
       const isProfileAdminTarget = targetEmail === ADMIN_EMAIL.toLowerCase();
 
-      // 🔴 TUZATILDI: 48 soatlik profil tashrifi (await qo'shildi va vaqti yangilanadigan qilindi)
+      // 48 soatlik profil tashrifi (upsert)
       if (
         viewerEmail &&
         isProfileAdminTarget &&
