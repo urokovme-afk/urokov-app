@@ -253,23 +253,19 @@ export default function UserPublicProfilePage() {
       const targetId = viewedProfileData.id;
       const isProfileAdminTarget = targetEmail === ADMIN_EMAIL.toLowerCase();
 
-      // 48 soatlik profil tashrifi (await qo'shildi, ma'lumot yo'qolmasligi uchun)
+      // 48 soatlik profil tashrifi
       if (
         viewerEmail &&
         isProfileAdminTarget &&
         viewerEmail !== ADMIN_EMAIL.toLowerCase()
       ) {
-        await supabase.from("profile_views").insert([
+        supabase.from("profile_views").insert([
           {
             profile_email: ADMIN_EMAIL.toLowerCase(),
             viewer_email: viewerEmail,
           },
         ]);
       }
-
-      const orFilter = targetId
-        ? `user_email.eq.${targetEmail},user_id.eq.${targetId}`
-        : `user_email.eq.${targetEmail}`;
 
       // 2) Parallel optimallashtirilgan so'rovlar
       const [
@@ -298,11 +294,12 @@ export default function UserPublicProfilePage() {
               .maybeSingle()
           : Promise.resolve({ data: null }),
         supabase.from("posts").select("id, content"),
-        supabase.from("reactions").select("*").or(orFilter),
+        // 🔴 TO'G'RILANDI: faqat email bo'yicha izlaydi
+        supabase.from("reactions").select("*").eq("user_email", targetEmail),
         supabase
           .from("comments")
           .select("*")
-          .or(orFilter)
+          .eq("user_email", targetEmail)
           .order("created_at", { ascending: false }),
         supabase
           .from("profiles")
@@ -1089,13 +1086,14 @@ export default function UserPublicProfilePage() {
         </div>
       )}
 
-      {/* 🔴 AVATAR ZOOM QISMI (Cho'zilib ketishi to'g'rilandi, qolgani eski kodingiz kabi) */}
+      {/* 🔴 AVATAR ZOOM QISMI (TO'G'RILANDI) */}
       {isZoomed && profile.avatar_url && (
         <div
           onClick={() => setIsZoomed(false)}
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-zoom-out"
         >
           <div className="relative max-w-sm w-full flex items-center justify-center">
+            {/* Aspect square va object cover xususiyatlari qo'shildi */}
             <img
               src={profile.avatar_url}
               alt="Zoomed Avatar"

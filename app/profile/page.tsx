@@ -231,7 +231,6 @@ export default function ProfilePage() {
         setAvatarUrl(curSession.user.user_metadata?.avatar_url || "");
       }
 
-      const orFilter = `user_email.eq.${userEmail},user_id.eq.${userId}`;
       const [
         { data: allProfs },
         { data: sts },
@@ -250,11 +249,12 @@ export default function ProfilePage() {
               .order("created_at", { ascending: false })
           : Promise.resolve({ data: [] as Story[] }),
         supabase.from("posts").select("id, content"),
-        supabase.from("reactions").select("*").or(orFilter),
+        // 🔴 XATOLIK SHU YERDA EDI (Faqat user_email bo'yicha qidiriladi)
+        supabase.from("reactions").select("*").eq("user_email", userEmail),
         supabase
           .from("comments")
           .select("*")
-          .or(orFilter)
+          .eq("user_email", userEmail)
           .order("created_at", { ascending: false }),
       ]);
 
@@ -1164,7 +1164,7 @@ export default function ProfilePage() {
                         <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate flex items-center gap-2">
                           {st.caption || "Без подписи"}
                           {isExpired && (
-                            <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 text-[9px] rounded uppercase font-bold">
+                            <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 text-[9px] rounded uppercase font-bold">
                               Архив
                             </span>
                           )}
