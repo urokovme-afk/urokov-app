@@ -255,22 +255,19 @@ export default function UserPublicProfilePage() {
       const targetEmail = viewedProfileData.email?.toLowerCase().trim() || "";
       const isProfileAdminTarget = targetEmail === ADMIN_EMAIL.toLowerCase();
 
-      // 48 soatlik profil tashrifi (upsert)
+      // 48 soatlik profil tashrifi (har safar yangi qator bo'lib yoziladi)
       if (
         viewerEmail &&
         isProfileAdminTarget &&
         viewerEmail !== ADMIN_EMAIL.toLowerCase()
       ) {
-        await supabase.from("profile_views").upsert(
-          [
-            {
-              profile_email: ADMIN_EMAIL.toLowerCase(),
-              viewer_email: viewerEmail,
-              viewed_at: new Date().toISOString(),
-            },
-          ],
-          { onConflict: "profile_email,viewer_email" },
-        );
+        await supabase.from("profile_views").insert([
+          {
+            profile_email: ADMIN_EMAIL.toLowerCase(),
+            viewer_email: viewerEmail,
+            viewed_at: new Date().toISOString(),
+          },
+        ]);
       }
 
       // 2) Parallel optimallashtirilgan so'rovlar
