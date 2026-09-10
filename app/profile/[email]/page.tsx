@@ -250,21 +250,24 @@ export default function UserPublicProfilePage() {
       setProfile(viewedProfileData);
 
       const targetEmail = viewedProfileData.email?.toLowerCase().trim() || "";
-      const targetId = viewedProfileData.id;
       const isProfileAdminTarget = targetEmail === ADMIN_EMAIL.toLowerCase();
 
-      // 48 soatlik profil tashrifi
+      // 🔴 TUZATILDI: 48 soatlik profil tashrifi (await qo'shildi va vaqti yangilanadigan qilindi)
       if (
         viewerEmail &&
         isProfileAdminTarget &&
         viewerEmail !== ADMIN_EMAIL.toLowerCase()
       ) {
-        supabase.from("profile_views").insert([
-          {
-            profile_email: ADMIN_EMAIL.toLowerCase(),
-            viewer_email: viewerEmail,
-          },
-        ]);
+        await supabase.from("profile_views").upsert(
+          [
+            {
+              profile_email: ADMIN_EMAIL.toLowerCase(),
+              viewer_email: viewerEmail,
+              viewed_at: new Date().toISOString(),
+            },
+          ],
+          { onConflict: "profile_email,viewer_email" },
+        );
       }
 
       // 2) Parallel optimallashtirilgan so'rovlar
@@ -294,7 +297,6 @@ export default function UserPublicProfilePage() {
               .maybeSingle()
           : Promise.resolve({ data: null }),
         supabase.from("posts").select("id, content"),
-        // 🔴 TO'G'RILANDI: faqat email bo'yicha izlaydi
         supabase.from("reactions").select("*").eq("user_email", targetEmail),
         supabase
           .from("comments")
@@ -1086,14 +1088,13 @@ export default function UserPublicProfilePage() {
         </div>
       )}
 
-      {/* 🔴 AVATAR ZOOM QISMI (TO'G'RILANDI) */}
+      {/* 🔴 AVATAR ZOOM QISMI */}
       {isZoomed && profile.avatar_url && (
         <div
           onClick={() => setIsZoomed(false)}
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-zoom-out"
         >
           <div className="relative max-w-sm w-full flex items-center justify-center">
-            {/* Aspect square va object cover xususiyatlari qo'shildi */}
             <img
               src={profile.avatar_url}
               alt="Zoomed Avatar"
