@@ -244,7 +244,7 @@ function TelegramVideoMessage({ src }: { src: string }) {
   );
 }
 
-// 🔴 VIDEOLAR UCHUN KARTA
+// 🔴 VIDEOLAR UCHUN KARTA (BOSILGANDA YUKLANADI)
 
 function TelegramVideoCard({
   src,
@@ -505,98 +505,27 @@ function TelegramAudioPlayer({ src }: { src: string }) {
   );
 }
 
-// 🔴 RASMLAR UCHUN KARTA
+// 🔴 RASMLAR UCHUN KARTA (AVTOMATIK YUKLANADIGAN QILINDI)
 
 function TelegramImageCard({
   src,
-
   onClick,
 }: {
   src: string;
-
   onClick: () => void;
 }) {
-  const [isLoaded, setIsLoaded] = useState(() => {
-    if (typeof window !== "undefined") {
-      return !!localStorage.getItem(`loaded_${src}`);
-    }
-
-    return false;
-  });
-
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleLoad = (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (isLoaded) {
-      onClick();
-
-      return;
-    }
-
-    setIsLoading(true);
-
-    const img = new Image();
-
-    img.src = src;
-
-    img.onload = () => {
-      setIsLoading(false);
-
-      setIsLoaded(true);
-
-      if (typeof window !== "undefined")
-        localStorage.setItem(`loaded_${src}`, "true");
-    };
-
-    img.onerror = () => {
-      setIsLoading(false);
-
-      setIsLoaded(true);
-    };
-  };
-
-  if (isLoaded) {
-    return (
-      <div className="w-full max-h-[380px] rounded-xl overflow-hidden bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center border border-gray-200 dark:border-gray-800/80 shadow-sm">
-        <img
-          src={src}
-          alt="Post media"
-          onClick={(e) => {
-            e.stopPropagation();
-
-            onClick();
-          }}
-          className="w-full h-auto max-h-[380px] object-cover cursor-pointer hover:opacity-95 transition"
-        />
-      </div>
-    );
-  }
-
   return (
-    <div
-      onClick={handleLoad}
-      className="group relative w-full aspect-video max-h-[320px] rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-800 cursor-pointer flex items-center justify-center select-none shadow-sm"
-    >
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-40 blur-xl scale-110 pointer-events-none"
-        style={{ backgroundImage: `url(${src})` }}
+    <div className="w-full max-h-[380px] rounded-xl overflow-hidden bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center border border-gray-200 dark:border-gray-800/80 shadow-sm">
+      <img
+        src={src}
+        alt="Post media"
+        loading="lazy"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+        className="w-full h-auto max-h-[380px] object-cover cursor-pointer hover:opacity-95 transition"
       />
-
-      <div className="z-10 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white group-hover:scale-110 group-active:scale-95 transition duration-200 shadow-lg">
-        {isLoading ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <Download className="w-5 h-5" />
-        )}
-      </div>
-
-      <div className="absolute bottom-3 left-3 px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-xl text-white text-[11px] font-mono font-medium flex items-center gap-1.5 pointer-events-none border border-white/10 z-10">
-        <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
-
-        <span>Загрузить фото</span>
-      </div>
     </div>
   );
 }
