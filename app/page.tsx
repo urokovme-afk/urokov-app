@@ -3803,8 +3803,9 @@ export default function Home() {
                 )}
               </button>
 
+              {/* 🔴 MANA SHU YER O'ZGARDI: Mobil uchun o'ng tomonga (right-0 o'rniga left-yoki sm:right-0) moslandi */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#181818] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-4 z-50">
+                <div className="absolute right-0 sm:right-0 -mr-16 sm:mr-0 mt-2 w-[300px] sm:w-96 bg-white dark:bg-[#181818] border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-4 z-50 origin-top-right">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800 mb-2">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-blue-500" />
