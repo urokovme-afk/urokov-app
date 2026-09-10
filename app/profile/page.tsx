@@ -139,7 +139,6 @@ export default function ProfilePage() {
   const [videoDuration, setVideoDuration] = useState(5);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const storyFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentEmail = session?.user?.email?.toLowerCase().trim() || "";
   const isAdmin = currentEmail === ADMIN_EMAIL.toLowerCase().trim();
@@ -249,7 +248,6 @@ export default function ProfilePage() {
               .order("created_at", { ascending: false })
           : Promise.resolve({ data: [] as Story[] }),
         supabase.from("posts").select("id, content"),
-        // 🔴 XATOLIK SHU YERDA EDI (Faqat user_email bo'yicha qidiriladi)
         supabase.from("reactions").select("*").eq("user_email", userEmail),
         supabase
           .from("comments")
@@ -328,62 +326,6 @@ export default function ProfilePage() {
       isMounted = false;
     };
   }, [router]);
-
-  const handleSelectStoryFile = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    if (!isAdmin || !session?.user?.email) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const maxMb = 100;
-    if (file.size > maxMb * 1024 * 1024) {
-      alert(`Размер файла не должен превышать ${maxMb} МБ!`);
-      return;
-    }
-
-    try {
-      const fileExt = file.name.split(".").pop()?.toLowerCase();
-      const fileName = `${Date.now()}_story_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-      const filePath = `user_stories/${fileName}`;
-
-      const { error: upErr } = await supabase.storage
-        .from("stories")
-        .upload(filePath, file);
-      if (upErr) throw upErr;
-
-      const { data: urlData } = supabase.storage
-        .from("stories")
-        .getPublicUrl(filePath);
-
-      const isVideo = file.type.startsWith("video/");
-      const expiresDate = new Date();
-      expiresDate.setDate(expiresDate.getDate() + 1);
-
-      const { data: stData, error: dbErr } = await supabase
-        .from("stories")
-        .insert([
-          {
-            user_email: session.user.email.toLowerCase().trim(),
-            media_url: urlData.publicUrl,
-            media_type: isVideo ? "video" : "image",
-            duration_days: 1,
-            expires_at: expiresDate.toISOString(),
-          },
-        ])
-        .select();
-
-      if (dbErr) throw dbErr;
-
-      if (stData && stData.length > 0) {
-        setMyStories((prev) => [stData[0] as Story, ...prev]);
-      }
-    } catch (err: unknown) {
-      alert("Ошибка при загрузке истории: " + getErrorMessage(err));
-    } finally {
-      if (storyFileInputRef.current) storyFileInputRef.current.value = "";
-    }
-  };
 
   const handleDeleteStory = async (storyId: number) => {
     if (!isAdmin) return;
@@ -701,16 +643,6 @@ export default function ProfilePage() {
 
         <div className="flex flex-col items-center text-center mb-6">
           <div className="relative group mb-3">
-            {isAdmin && (
-              <input
-                type="file"
-                ref={storyFileInputRef}
-                onChange={handleSelectStoryFile}
-                accept="image/*,video/*"
-                className="hidden"
-              />
-            )}
-
             <input
               type="file"
               ref={fileInputRef}
@@ -721,13 +653,9 @@ export default function ProfilePage() {
 
             <div
               onClick={() => {
-                if (isAdmin) {
-                  if (myStories.length > 0) {
-                    setViewingStoryIndex(0);
-                    setStoryProgress(0);
-                  } else {
-                    storyFileInputRef.current?.click();
-                  }
+                if (myStories.length > 0) {
+                  setViewingStoryIndex(0);
+                  setStoryProgress(0);
                 } else if (avatarUrl) {
                   setIsZoomed(true);
                 } else {
@@ -735,7 +663,7 @@ export default function ProfilePage() {
                 }
               }}
               className={`relative w-24 h-24 rounded-full p-0.5 cursor-pointer transition active:scale-95 ${
-                isAdmin && myStories.length > 0
+                myStories.length > 0
                   ? "bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 p-[2px] shadow-lg animate-pulse"
                   : "border-2 border-gray-200 dark:border-gray-800"
               }`}
@@ -753,36 +681,25 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {isAdmin ? (
-              <button
-                type="button"
-                onClick={() => storyFileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg transition active:scale-95 z-10"
-                title="Добавить историю"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={uploadingAvatar}
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg transition active:scale-95 z-10 disabled:opacity-70"
-                title="Изменить фото"
-              >
-                {uploadingAvatar ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Camera className="w-4 h-4" />
-                )}
-              </button>
-            )}
+            <button
+              type="button"
+              disabled={uploadingAvatar}
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg transition active:scale-95 z-10 disabled:opacity-70 cursor-pointer"
+              title="Изменить фото"
+            >
+              {uploadingAvatar ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4" />
+              )}
+            </button>
 
             {avatarUrl && (
               <button
                 type="button"
                 onClick={handleRemoveAvatar}
-                className="absolute top-0 right-0 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md transition active:scale-95 z-10"
+                className="absolute top-0 right-0 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md transition active:scale-95 z-10 cursor-pointer"
                 title="Удалить фото"
               >
                 <Trash2 className="w-3.5 h-3.5" />
