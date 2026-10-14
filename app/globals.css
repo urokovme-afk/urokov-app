@@ -10,6 +10,14 @@ body {
   -webkit-touch-callout: none;
 }
 
+input,
+textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
 /* Rasmlar va videolarni brauzerdan tortib olib saqlashni to'sish */
 img,
 video {

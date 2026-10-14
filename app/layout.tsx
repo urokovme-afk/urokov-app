@@ -2,21 +2,21 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "../components/theme-provider";
-import { LiveTracker } from "../components/live-tracker";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
 export const metadata: Metadata = {
-  title: "Urokov",
-  description: "IT, Кибербезопасность и личные заметки",
+  metadataBase: new URL("https://urokov.uz"),
+  title: "Urokov — 3D Motion & Visual Lab",
+  description: "3D animatsiyalar, vizual san'at va motion dizayn namoyishi.",
   icons: {
     icon: "/icon.png",
     shortcut: "/icon.png",
     apple: "/logo.png",
   },
   openGraph: {
-    title: "Urokov",
-    description: "IT, Кибербезопасность и личные заметки",
+    title: "Urokov — 3D Motion & Visual Lab",
+    description: "3D animatsiyalar, vizual san'at va motion dizayn namoyishi.",
     url: "https://urokov.uz",
     siteName: "Urokov",
     images: [
@@ -24,16 +24,16 @@ export const metadata: Metadata = {
         url: "/logo.png",
         width: 1200,
         height: 630,
-        alt: "Urokov Logo Preview",
+        alt: "Urokov 3D Motion Preview",
       },
     ],
-    locale: "ru_RU",
+    locale: "uz_UZ",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Urokov",
-    description: "IT, Кибербезопасность и личные заметки",
+    title: "Urokov — 3D Motion & Visual Lab",
+    description: "3D animatsiyalar, vizual san'at va motion dizayn namoyishi.",
     images: ["/logo.png"],
   },
 };
@@ -49,7 +49,6 @@ export default function RootLayout({
       <body
         className={`${inter.className} font-sans bg-gray-50 dark:bg-[#0a0a0a] text-black dark:text-white antialiased`}
       >
-        <LiveTracker />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
