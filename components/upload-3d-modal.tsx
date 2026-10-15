@@ -33,6 +33,11 @@ function wrapJsInHtml(code: string): string {
     return trimmed;
   }
 
+  const hasScene = /\b(const|let|var)\s+scene\b|\bwindow\.scene\b|\bscene\s*=/i.test(trimmed);
+  const hasCamera = /\b(const|let|var)\s+camera\b|\bwindow\.camera\b|\bcamera\s*=/i.test(trimmed);
+  const hasRenderer = /\b(const|let|var)\s+renderer\b|\bwindow\.renderer\b|\brenderer\s*=/i.test(trimmed);
+  const hasAnimate = /\brequestAnimationFrame\b/i.test(trimmed);
+
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -64,10 +69,64 @@ function wrapJsInHtml(code: string): string {
       console.error("3D Error:", e);
     });
 
+    // Автоматическая базовая сцена, если AI код пропустил инициализацию
+    ${
+      !hasScene
+        ? `window.scene = new THREE.Scene();
+    var scene = window.scene;
+    scene.background = new THREE.Color(0xffffff);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(20, 40, 30);
+    scene.add(dirLight);`
+        : ""
+    }
+
+    ${
+      !hasCamera
+        ? `window.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    var camera = window.camera;
+    camera.position.set(0, 15, 35);`
+        : ""
+    }
+
+    ${
+      !hasRenderer
+        ? `window.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    var renderer = window.renderer;
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+
+    window.controls = new THREE.OrbitControls(camera, renderer.domElement);
+    var controls = window.controls;
+    controls.enableDamping = true;
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });`
+        : ""
+    }
+
     try {
       ${trimmed}
     } catch (err) {
       document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-family:monospace;font-size:12px;padding:16px;text-align:center;">Ошибка в 3D скрипте: ' + err.message + '</div>';
+    }
+
+    ${
+      !hasAnimate
+        ? `function defaultRenderLoop() {
+      requestAnimationFrame(defaultRenderLoop);
+      if (typeof controls !== 'undefined' && controls && controls.update) controls.update();
+      if (typeof renderer !== 'undefined' && typeof scene !== 'undefined' && typeof camera !== 'undefined') {
+        renderer.render(scene, camera);
+      }
+    }
+    defaultRenderLoop();`
+        : ""
     }
   </script>
 </body>
