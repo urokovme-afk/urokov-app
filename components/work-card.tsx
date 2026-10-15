@@ -27,6 +27,9 @@ interface WorkCardProps {
   onOpenLightbox: (post: WorkPost) => void;
 }
 
+// Глобальный кэш текста 3D кода в памяти
+const codeCache = new Map<string, string>();
+
 export function WorkCard({
   post,
   isAdmin,
@@ -39,6 +42,10 @@ export function WorkCard({
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [htmlContent, setHtmlContent] = useState<string>(() => {
+    return codeCache.get(post.media_url) || "";
+  });
+  const [codeLoading, setCodeLoading] = useState(!codeCache.has(post.media_url));
 
   const isCode =
     post.media_type === "code" ||
@@ -47,6 +54,34 @@ export function WorkCard({
   const isVideo =
     post.media_type === "video" ||
     /\.(mp4|webm|mov|m4v)$/i.test((post.media_url || "").split("?")[0].toLowerCase());
+
+  // Загрузка HTML кода для исполнения в iframe через srcDoc
+  useEffect(() => {
+    if (!isCode || !post.media_url) return;
+
+    if (codeCache.has(post.media_url)) {
+      return;
+    }
+
+    let isMounted = true;
+    fetch(post.media_url)
+      .then((res) => res.text())
+      .then((text) => {
+        codeCache.set(post.media_url, text);
+        if (isMounted) {
+          setHtmlContent(text);
+          setCodeLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error("3D code load error:", err);
+        if (isMounted) setCodeLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isCode, post.media_url]);
 
   // Автоматический запуск видео в поле видимости
   useEffect(() => {
@@ -102,18 +137,30 @@ export function WorkCard({
       onClick={() => onOpenLightbox(post)}
       className="group relative aspect-square sm:aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-white border border-zinc-200/90 hover:border-zinc-400 hover:shadow-lg transition-all duration-300 cursor-pointer select-none"
     >
-      {/* 3D Визуал (Интерактивный код, видео или изображение) */}
+      {/* 3D Визуал (Исполняемый HTML код через srcDoc, видео или изображение) */}
       {isCode ? (
-        <div className="w-full h-full relative bg-white">
-          <iframe
-            src={post.media_url}
-            title={post.content || "3D Visual"}
-            className="w-full h-full border-0 pointer-events-none select-none"
-            sandbox="allow-scripts allow-same-origin"
-            loading="lazy"
-          />
+        <div className="w-full h-full relative bg-white flex items-center justify-center">
+          {htmlContent ? (
+            <iframe
+              srcDoc={htmlContent}
+              title={post.content || "3D Visual"}
+              className="w-full h-full border-0 pointer-events-none select-none"
+              sandbox="allow-scripts allow-same-origin"
+            />
+          ) : codeLoading ? (
+            <div className="flex flex-col items-center justify-center gap-1.5 text-zinc-400">
+              <Loader2 className="w-5 h-5 animate-spin text-cyan-600" />
+              <span className="text-[10px] font-mono">Запуск 3D...</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-3 text-center text-zinc-400">
+              <Code2 className="w-6 h-6 mb-1 text-zinc-300" />
+              <span className="text-[10px] font-mono">3D Визуал</span>
+            </div>
+          )}
+
           {/* Значок 3D КОД */}
-          <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-md border border-zinc-200 shadow-xs text-[10px] font-mono font-bold text-zinc-700">
+          <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/95 backdrop-blur-md border border-zinc-200 shadow-xs text-[10px] font-mono font-bold text-zinc-700">
             <Code2 className="w-3 h-3 text-cyan-600" />
             <span>3D КОД</span>
           </div>

@@ -35,6 +35,7 @@ export function MediaLightbox({
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [htmlContent, setHtmlContent] = useState<string>("");
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -52,8 +53,6 @@ export function MediaLightbox({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen || !mediaUrl) return null;
-
   const isCode =
     mediaType === "code" ||
     /\.(html|htm)$/i.test(mediaUrl.split("?")[0].toLowerCase());
@@ -61,6 +60,25 @@ export function MediaLightbox({
   const isVideo =
     mediaType === "video" ||
     /\.(mp4|webm|mov|m4v)$/i.test(mediaUrl.split("?")[0].toLowerCase());
+
+  // Загрузка HTML кода для исполнения в интерактивном окне
+  useEffect(() => {
+    if (!isOpen || !isCode || !mediaUrl) return;
+
+    let isMounted = true;
+    fetch(mediaUrl)
+      .then((res) => res.text())
+      .then((text) => {
+        if (isMounted) setHtmlContent(text);
+      })
+      .catch((err) => console.error("Code load error in lightbox:", err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, isCode, mediaUrl]);
+
+  if (!isOpen || !mediaUrl) return null;
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -79,8 +97,7 @@ export function MediaLightbox({
     if (copying) return;
     try {
       setCopying(true);
-      const res = await fetch(mediaUrl);
-      const text = await res.text();
+      const text = htmlContent || (await (await fetch(mediaUrl)).text());
       await navigator.clipboard.writeText(text);
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2500);
@@ -196,12 +213,19 @@ export function MediaLightbox({
       >
         {isCode ? (
           <div className="w-full aspect-[4/3] sm:aspect-[16/10] max-h-[68vh] rounded-2xl overflow-hidden shadow-2xl border border-zinc-200 bg-white">
-            <iframe
-              src={mediaUrl}
-              title="3D Interactive Canvas"
-              className="w-full h-full border-0 pointer-events-auto"
-              sandbox="allow-scripts allow-same-origin"
-            />
+            {htmlContent ? (
+              <iframe
+                srcDoc={htmlContent}
+                title="3D Interactive Canvas"
+                className="w-full h-full border-0 pointer-events-auto"
+                sandbox="allow-scripts allow-same-origin"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-zinc-400">
+                <Loader2 className="w-6 h-6 animate-spin text-cyan-600" />
+                <span className="text-xs font-mono">Запуск 3D сцены...</span>
+              </div>
+            )}
           </div>
         ) : isVideo ? (
           <video
