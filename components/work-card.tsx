@@ -6,7 +6,7 @@ import {
   Pin,
   Trash2,
   Loader2,
-  Film,
+  Code2,
 } from "lucide-react";
 
 export interface WorkPost {
@@ -40,11 +40,15 @@ export function WorkCard({
   const [isDeleting, setIsDeleting] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  const isCode =
+    post.media_type === "code" ||
+    /\.(html|htm)$/i.test((post.media_url || "").split("?")[0].toLowerCase());
+
   const isVideo =
     post.media_type === "video" ||
     /\.(mp4|webm|mov|m4v)$/i.test((post.media_url || "").split("?")[0].toLowerCase());
 
-  // Videolarni ko'rinib turganda loop qilish
+  // Автоматический запуск видео в поле видимости
   useEffect(() => {
     if (!isVideo || !videoRef.current || !containerRef.current) return;
 
@@ -74,7 +78,7 @@ export function WorkCard({
     e.stopPropagation();
     if (!onDelete) return;
 
-    const confirmDelete = window.confirm("Ushbu 3D ishni o'chirishni tasdiqlaysizmi?");
+    const confirmDelete = window.confirm("Удалить эту 3D работу?");
     if (!confirmDelete) return;
 
     setIsDeleting(true);
@@ -96,23 +100,44 @@ export function WorkCard({
     <div
       ref={containerRef}
       onClick={() => onOpenLightbox(post)}
-      className="group relative aspect-square sm:aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-800/80 hover:border-zinc-500/60 transition-all duration-300 cursor-pointer shadow-md select-none"
+      className="group relative aspect-square sm:aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-white border border-zinc-200/90 hover:border-zinc-400 hover:shadow-lg transition-all duration-300 cursor-pointer select-none"
     >
-      {/* 3D Media Visual (Image or Video) */}
-      {isVideo ? (
-        <video
-          ref={videoRef}
-          src={post.media_url}
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+      {/* 3D Визуал (Интерактивный код, видео или изображение) */}
+      {isCode ? (
+        <div className="w-full h-full relative bg-white">
+          <iframe
+            src={post.media_url}
+            title={post.content || "3D Visual"}
+            className="w-full h-full border-0 pointer-events-none select-none"
+            sandbox="allow-scripts allow-same-origin"
+            loading="lazy"
+          />
+          {/* Значок 3D КОД */}
+          <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-md border border-zinc-200 shadow-xs text-[10px] font-mono font-bold text-zinc-700">
+            <Code2 className="w-3 h-3 text-cyan-600" />
+            <span>3D КОД</span>
+          </div>
+        </div>
+      ) : isVideo ? (
+        <>
+          <video
+            ref={videoRef}
+            src={post.media_url}
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          {/* Значок видео */}
+          <div className="absolute top-2.5 left-2.5 z-10 p-1.5 rounded-lg bg-black/60 backdrop-blur-md text-white">
+            <Play className="w-3 h-3 fill-white" />
+          </div>
+        </>
       ) : imageError ? (
-        <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-900 text-zinc-500">
-          <Film className="w-6 h-6 mb-1 text-zinc-600" />
-          <span className="text-[10px] font-mono">3D Fayl</span>
+        <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-50 text-zinc-400">
+          <Code2 className="w-6 h-6 mb-1 text-zinc-300" />
+          <span className="text-[10px] font-mono">3D Визуал</span>
         </div>
       ) : (
         <img
@@ -124,45 +149,38 @@ export function WorkCard({
         />
       )}
 
-      {/* Subtle overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
+      {/* Легкий градиент при наведении */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
 
-      {/* Video Indicator Icon */}
-      {isVideo && (
-        <div className="absolute top-2.5 left-2.5 z-10 p-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white/90">
-          <Play className="w-3 h-3 fill-white" />
-        </div>
-      )}
-
-      {/* Pinned Badge */}
+      {/* Закрепленный элемент */}
       {post.is_pinned && (
-        <div className="absolute top-2.5 right-2.5 z-10 p-1 rounded-md bg-cyan-950/80 border border-cyan-500/50 text-cyan-400 backdrop-blur-md">
+        <div className="absolute top-2.5 right-2.5 z-10 p-1 rounded-md bg-white/90 border border-cyan-400 text-cyan-600 shadow-xs backdrop-blur-md">
           <Pin className="w-3 h-3 rotate-45" />
         </div>
       )}
 
-      {/* Admin Action Bar (Only for urokov.me@gmail.com) */}
+      {/* Панель администратора (только для urokov.me@gmail.com) */}
       {isAdmin && (
-        <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1.5 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-zinc-700/80 shadow-lg">
+        <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1.5 bg-white/95 backdrop-blur-md p-1 rounded-xl border border-zinc-200 shadow-md">
           <button
             onClick={handleTogglePin}
             className={`p-1.5 rounded-lg transition ${
               post.is_pinned
-                ? "text-cyan-400 bg-cyan-950/60"
-                : "text-zinc-400 hover:text-white"
+                ? "text-cyan-600 bg-cyan-50"
+                : "text-zinc-500 hover:text-zinc-900"
             }`}
-            title="Pin"
+            title="Закрепить"
           >
             <Pin className="w-3 h-3" />
           </button>
           <button
             onClick={handleDelete}
             disabled={isDeleting}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 transition"
-            title="O'chirish"
+            className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-600 transition"
+            title="Удалить"
           >
             {isDeleting ? (
-              <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
+              <Loader2 className="w-3 h-3 animate-spin text-rose-500" />
             ) : (
               <Trash2 className="w-3 h-3" />
             )}

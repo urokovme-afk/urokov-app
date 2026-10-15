@@ -7,16 +7,16 @@ const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://urokov.uz"),
-  title: "Urokov — 3D Motion & Visual Lab",
-  description: "3D animatsiyalar, vizual san'at va motion dizayn namoyishi.",
+  title: "Urokov — 3D & Creative Coding Lab",
+  description: "Интерактивные 3D визуализации, генеративная графика и анимации.",
   icons: {
     icon: "/icon.png",
     shortcut: "/icon.png",
     apple: "/logo.png",
   },
   openGraph: {
-    title: "Urokov — 3D Motion & Visual Lab",
-    description: "3D animatsiyalar, vizual san'at va motion dizayn namoyishi.",
+    title: "Urokov — 3D & Creative Coding Lab",
+    description: "Интерактивные 3D визуализации, генеративная графика и анимации.",
     url: "https://urokov.uz",
     siteName: "Urokov",
     images: [
@@ -24,16 +24,16 @@ export const metadata: Metadata = {
         url: "/logo.png",
         width: 1200,
         height: 630,
-        alt: "Urokov 3D Motion Preview",
+        alt: "Urokov 3D Lab Preview",
       },
     ],
-    locale: "uz_UZ",
+    locale: "ru_RU",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Urokov — 3D Motion & Visual Lab",
-    description: "3D animatsiyalar, vizual san'at va motion dizayn namoyishi.",
+    title: "Urokov — 3D & Creative Coding Lab",
+    description: "Интерактивные 3D визуализации, генеративная графика и анимации.",
     images: ["/logo.png"],
   },
 };
@@ -45,18 +45,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
-      {/* Kompyuterda orqa fonni (body) biroz farqli qilib ajratamiz */}
       <body
-        className={`${inter.className} font-sans bg-gray-50 dark:bg-[#0a0a0a] text-black dark:text-white antialiased`}
+        className={`${inter.className} font-sans bg-[#f7f8fa] text-zinc-900 antialiased`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
+          forcedTheme="light"
           enableSystem={false}
           disableTransitionOnChange
         >
-          {/* O'rtadagi asosiy lenta (Mobil ilova formati: 600px) */}
-          <div className="w-full max-w-[600px] mx-auto min-h-screen bg-white dark:bg-black border-x border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-none">
+          {/* Центральный фрейм (600px) на мягком светлом фоне */}
+          <div className="w-full max-w-[600px] mx-auto min-h-screen bg-white border-x border-zinc-200/90 shadow-[0_0_25px_rgba(0,0,0,0.03)] flex flex-col justify-between">
             {children}
           </div>
         </ThemeProvider>
